@@ -39,7 +39,6 @@ studio/
 
 ## 📦 Getting Started
 
-1. Clone the repo
 
 ```bash
 1. Clone the repo
@@ -53,3 +52,8 @@ npm install
 npm run dev
 
 Visit http://localhost:3000 to view the app.
+```
+## ✨ Contributing
+
+Pull requests are welcome! For major changes, please open an issue first to discuss what you’d like to change.
+
