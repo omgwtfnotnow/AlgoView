@@ -37,19 +37,17 @@ export function MainNav() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                  tooltip={{ children: item.label, className: "text-xs" }}
-                  className="justify-start"
-                >
-                  <a>
-                    <item.icon className="w-5 h-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                tooltip={{ children: item.label, className: "text-xs" }}
+                className="justify-start"
+              >
+                <Link href={item.href}>
+                  <item.icon className="w-5 h-5" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
