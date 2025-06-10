@@ -57,3 +57,20 @@ Visit http://localhost:3000 to view the app.
 
 Pull requests are welcome! For major changes, please open an issue first to discuss what you’d like to change.
 
+
+### 📝 License
+
+AlgoView is licensed under the MIT License — a short and simple permissive license.
+
+✅ Permissions:
+	•	✅ Commercial use
+	•	✅ Modification
+	•	✅ Distribution
+	•	✅ Private use
+
+❌ Limitations:
+	•	❌ No liability
+	•	❌ No warranty
+
+📌 Conditions:
+	•	You must include the original license and copyright notice in any copies or substantial portions of the software.
