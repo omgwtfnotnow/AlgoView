@@ -39,7 +39,7 @@ export const SearchVisualizer: React.FC = () => {
   const [target, setTarget] = useState<number | undefined>(undefined);
   const [currentStep, setCurrentStep] = useState<SearchStep | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(500); // ms delay
+  const [speed, setSpeed] = useState(200); // ms delay
   const [dataSize, setDataSize] = useState(10);
   const [maxArrayValue, setMaxArrayValue] = useState(100);
   const [isFinished, setIsFinished] = useState(false);

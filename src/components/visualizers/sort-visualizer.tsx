@@ -46,7 +46,7 @@ export const SortVisualizer: React.FC = () => {
   const [array, setArray] = useState<number[]>(generateRandomArray(10));
   const [currentStep, setCurrentStep] = useState<SortStep | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(500); // ms delay
+  const [speed, setSpeed] = useState(200); // ms delay
   const [dataSize, setDataSize] = useState(10);
   const [maxArrayValue, setMaxArrayValue] = useState(100);
   const [isFinished, setIsFinished] = useState(false);
