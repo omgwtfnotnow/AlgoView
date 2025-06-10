@@ -12,6 +12,7 @@ import { quickSortGenerator } from '@/lib/algorithms/sort/quick-sort';
 import type { SortStep, AlgorithmGenerator, SortAlgorithmKey, Algorithm } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const sortAlgorithms: Record<SortAlgorithmKey, Algorithm & { generator: (arr: number[]) => AlgorithmGenerator }> = {
   'bubble-sort': {
