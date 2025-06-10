@@ -1,5 +1,5 @@
 import Link from 'next/link';
-// import { SidebarTrigger } from '@/components/ui/sidebar'; // Removed
+
 import {
   Menubar,
   MenubarContent,
@@ -23,7 +23,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        <div className="mr-4 flex items-center"> {/* Always show brand */}
+        <div className="mr-4 flex items-center"> 
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <NetworkIcon className="h-6 w-6 text-primary" />
             <span className="font-bold sm:inline-block font-headline">
@@ -62,7 +62,7 @@ export function SiteHeader() {
         </Menubar>
 
         <div className="flex flex-1 items-center justify-end space-x-2">
-          {/* Add any header actions here, e.g., theme toggle, user profile */}
+          
         </div>
       </div>
     </header>

@@ -78,7 +78,7 @@ export const GraphVisualizer: React.FC = () => {
   const [selectedAlgorithmKey, setSelectedAlgorithmKey] = useState<GraphAlgorithmKey>('dijkstra');
   const [graph, setGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [startNodeId, setStartNodeId] = useState<string>('');
-  const [targetNodeId, setTargetNodeId] = useState<string>(''); // Not used by all algos
+  const [targetNodeId, setTargetNodeId] = useState<string>(''); 
   const [currentStep, setCurrentStep] = useState<GraphStep | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const [numNodes, setNumNodes] = useState(5);
@@ -142,7 +142,7 @@ export const GraphVisualizer: React.FC = () => {
   
   useEffect(() => {
     handleGenerateNewGraph(numNodes, numEdges, allowNegativeWeights);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, []); 
 
   useEffect(() => {
@@ -150,7 +150,7 @@ export const GraphVisualizer: React.FC = () => {
       let useNegative = allowNegativeWeights;
       if (selectedAlgorithmKey === 'dijkstra') useNegative = false;
       else if (['bellman-ford', 'a-star', 'floyd-warshall', 'kruskal', 'prim'].includes(selectedAlgorithmKey)) {
-         // For these, allowNegativeWeights state dictates it, but Kruskal/Prim usually use non-negative examples.
+         
       }
       handleGenerateNewGraph(numNodes, numEdges, useNegative);
     } else {
@@ -198,7 +198,7 @@ export const GraphVisualizer: React.FC = () => {
         algorithmInstanceRef.current = generatorFn(graph.nodes, graph.edges);
     } else if (isPrimSelected) {
         algorithmInstanceRef.current = generatorFn(graph.nodes, graph.edges, startNodeId);
-    } else { // Dijkstra, Bellman-Ford, A*
+    } else { 
         if (selectedAlgorithmKey === 'a-star' && !actualTargetNodeId) {
             toast({ title: "Target Node Required for A*", description: "Please specify a target node for A* search.", variant: "destructive" });
             return false;
@@ -214,7 +214,7 @@ export const GraphVisualizer: React.FC = () => {
         if (step?.isFinalStep && step.message.toLowerCase().includes("error")) {
             toast({ title: "Algorithm Initialization Error", description: step.message, variant: "destructive" });
         }
-    } else if (firstStepResult?.done && firstStepResult.value) { // Generator might complete in one step for trivial cases
+    } else if (firstStepResult?.done && firstStepResult.value) { 
         const step = firstStepResult.value as GraphStep;
         setCurrentStep(step);
         setIsFinished(true);
@@ -234,7 +234,7 @@ export const GraphVisualizer: React.FC = () => {
     if(graph.nodes.length > 0){
         const reinitialized = initializeAlgorithm();
         if (!reinitialized ) {
-           handleGenerateNewGraph(); // Fallback to regenerating graph if init fails badly
+           handleGenerateNewGraph(); 
         }
     } else {
         handleGenerateNewGraph(); 
@@ -245,8 +245,8 @@ export const GraphVisualizer: React.FC = () => {
     if (!algorithmInstanceRef.current) {
       const initialized = initializeAlgorithm();
       if (!initialized) return false; 
-      // If the first step from initializeAlgorithm was already final, nextStep shouldn't proceed.
-      // The check for currentStep?.isFinalStep handles this.
+      
+      
       if (currentStep?.isFinalStep) return false; 
     }
 
@@ -289,14 +289,12 @@ export const GraphVisualizer: React.FC = () => {
               setCurrentStep(null);
               setIsFinished(false);
               algorithmInstanceRef.current = null;
-              // Automatically adjust allowNegativeWeights based on algorithm
+              
               if (newKey === 'dijkstra') {
                 setAllowNegativeWeights(false);
               } else if (['bellman-ford', 'a-star', 'floyd-warshall', 'kruskal', 'prim'].includes(newKey)) {
-                // For these, default to allowing negative weights if the checkbox was previously checked,
-                // or set a sensible default (e.g. false for MSTs, true for Bellman/Floyd)
-                // For now, let's just ensure it *can* be checked if it was already.
-                // Actual graph generation will use the current `allowNegativeWeights` state.
+                
+                
               }
                if (numNodes > (newKey === 'floyd-warshall' ? 8 : 20)) {
                  setNumNodes(newKey === 'floyd-warshall' ? 8 : 20);
@@ -347,14 +345,14 @@ export const GraphVisualizer: React.FC = () => {
                 <Slider 
                     id="numEdgesSlider" 
                     min={1} 
-                    max={Math.min(50, numNodes * (numNodes -1) / (currentAlgorithmDetails.type === 'graph' ? 1 : 2) )} // Max edges for simple graph
+                    max={Math.min(50, numNodes * (numNodes -1) / (currentAlgorithmDetails.type === 'graph' ? 1 : 2) )} 
                     value={[numEdges]} 
                     onValueChange={(val) => setNumEdges(val[0])} 
                     className="mt-1"
                 />
             </div>
         </div>
-         {(!isFloydWarshallSelected && !isKruskalSelected) && ( // Hide for Floyd-Warshall and Kruskal
+         {(!isFloydWarshallSelected && !isKruskalSelected) && ( 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <div>
                     <Label htmlFor="startNode">Start Node ID {isPrimSelected && <span className="text-destructive">*</span>}</Label>
@@ -368,7 +366,7 @@ export const GraphVisualizer: React.FC = () => {
                       required={isPrimSelected}
                     />
                 </div>
-                {selectedAlgorithmKey !== 'prim' && ( // Hide Target Node for Prim's as well
+                {selectedAlgorithmKey !== 'prim' && ( 
                     <div>
                         <Label htmlFor="targetNode">
                         Target Node ID {selectedAlgorithmKey === 'a-star' && <span className="text-destructive">*</span>}

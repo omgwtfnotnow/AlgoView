@@ -2,7 +2,7 @@
 export interface VisualizerStep {
   message: string;
   isFinalStep: boolean;
-  // Specific highlight structure will vary by visualizer type
+  
 }
 
 export interface ArrayVisualizerStep extends VisualizerStep {
@@ -16,33 +16,33 @@ export interface ArrayVisualizerStep extends VisualizerStep {
 
 export interface SearchStep extends ArrayVisualizerStep {
   target?: number;
-  currentIndex?: number; // For linear search
-  low?: number;           // For binary search
-  high?: number;          // For binary search
-  mid?: number;           // For binary search
-  targetFoundAtIndex?: number | undefined; // Changed from null to undefined for consistency
+  currentIndex?: number; 
+  low?: number;           
+  high?: number;          
+  mid?: number;           
+  targetFoundAtIndex?: number | undefined; 
 }
 
 export interface SortStep extends ArrayVisualizerStep {
-  comparing?: [number, number] | undefined; // Changed from null to undefined
-  swapping?: [number, number] | undefined; // Changed from null to undefined
-  sortedIndices?: number[]; // Indices that are in their final sorted position
-  pivotIndex?: number; // For QuickSort
-  subArrayBounds?: { start: number, end: number }; // For merge sort partitions etc.
+  comparing?: [number, number] | undefined; 
+  swapping?: [number, number] | undefined; 
+  sortedIndices?: number[]; 
+  pivotIndex?: number; 
+  subArrayBounds?: { start: number, end: number }; 
 }
 
-// --- Graph Algorithm Types ---
+
 export interface GraphNode {
   id: string;
   label?: string;
-  x?: number; // For positioning in visualization & A* heuristic
-  y?: number; // For positioning in visualization & A* heuristic
+  x?: number; 
+  y?: number; 
 }
 
 export interface GraphEdge {
   id: string;
-  source: string; // Node ID
-  target: string; // Node ID
+  source: string; 
+  target: string; 
   weight?: number;
   directed?: boolean;
 }
@@ -50,36 +50,36 @@ export interface GraphEdge {
 export type GraphHighlightColor = 'primary' | 'secondary' | 'accent' | 'destructive' | 'muted' | 'neutral' | 'info' | 'visited' | 'path';
 
 export interface GraphElementHighlight {
-  id: string; // Node or Edge ID
+  id: string; 
   color: GraphHighlightColor;
   type: 'node' | 'edge';
-  label?: string; // e.g., display distance on node, or f/g/h scores for A*
+  label?: string; 
 }
 
 export interface GraphStep extends VisualizerStep {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  distances?: Record<string, number | typeof Infinity>; // Node ID to distance from start (gScore for A*)
-  predecessors?: Record<string, string | null>; // Node ID to predecessor Node ID (cameFrom for A*)
-  currentNodeId?: string; // Current node being processed (Dijkstra, Bellman-Ford)
+  distances?: Record<string, number | typeof Infinity>; 
+  predecessors?: Record<string, string | null>; 
+  currentNodeId?: string; 
   highlights: GraphElementHighlight[];
-  targetFoundPath?: string[]; // Array of node IDs forming the path, if target was specified
+  targetFoundPath?: string[]; 
   
-  // A* specific
+  
   fScores?: Record<string, number | typeof Infinity>; 
   
-  // Floyd-Warshall specific
+  
   distanceMatrix?: Record<string, Record<string, number | typeof Infinity>>;
-  nextHopMatrix?: Record<string, Record<string, string | null>>; // Stores the next node on the path from source to target
-  currentKNodeId?: string; // The intermediate node k in Floyd-Warshall
-  currentSourceNodeId?: string; // The source node i in Floyd-Warshall
-  currentDestNodeId?: string; // The destination node j in Floyd-Warshall
-  negativeCycleDetected?: boolean; // Flag for Floyd-Warshall and Bellman-Ford
+  nextHopMatrix?: Record<string, Record<string, string | null>>; 
+  currentKNodeId?: string; 
+  currentSourceNodeId?: string; 
+  currentDestNodeId?: string; 
+  negativeCycleDetected?: boolean; 
 
-  // MST specific
-  mstWeight?: number; // Current total weight of the MST
+  
+  mstWeight?: number; 
 }
-// --- End Graph Algorithm Types ---
+
 
 
 export type AlgorithmType = 'search' | 'sort' | 'graph';

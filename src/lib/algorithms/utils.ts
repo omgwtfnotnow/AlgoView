@@ -2,7 +2,7 @@ export function generateRandomArray(size: number, maxValue: number = 100): numbe
   return Array.from({ length: size }, () => Math.floor(Math.random() * (maxValue + 1)));
 }
 
-// Fisher-Yates shuffle
+
 export function shuffleArray<T>(array: T[]): T[] {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {

@@ -14,7 +14,7 @@ export function* primGenerator(
 
   let startNode = nodes.find(n => n.id === startNodeIdInput);
   if (!startNode) {
-    startNode = nodes[0]; // Default to first node if startNodeId is invalid or not provided
+    startNode = nodes[0]; 
   }
   const startNodeId = startNode.id;
 
@@ -22,8 +22,8 @@ export function* primGenerator(
   let mstWeight = 0;
   const visitedNodes = new Set<string>();
   
-  // Priority Queue stores [weight, sourceNodeId, targetNodeId, edgeId]
-  // For simplicity, we'll use an array and sort, but a MinHeap is more efficient
+  
+  
   const edgeCandidates: { weight: number; source: string; target: string; id: string }[] = [];
 
   const createHighlights = (
@@ -38,9 +38,9 @@ export function* primGenerator(
       label: n.label || n.id,
     })).concat(edges.map(e => {
       let color: GraphHighlightColor = 'neutral';
-      if (mstEdges.find(me => me.id === e.id)) color = 'path'; // Edge in MST
-      else if (selectedEdgeId === e.id) color = 'accent'; // Edge just selected
-      else if (candidateEdgeIds.includes(e.id)) color = 'secondary'; // Candidate edge
+      if (mstEdges.find(me => me.id === e.id)) color = 'path'; 
+      else if (selectedEdgeId === e.id) color = 'accent'; 
+      else if (candidateEdgeIds.includes(e.id)) color = 'secondary'; 
       return { id: e.id, type: 'edge' as 'edge', color };
     }));
   };
@@ -56,11 +56,11 @@ export function* primGenerator(
     mstWeight: 0,
   };
 
-  // Add initial edges from startNode
+  
   edges.forEach(edge => {
     if (edge.source === startNodeId && !visitedNodes.has(edge.target)) {
       edgeCandidates.push({ weight: edge.weight || 0, source: edge.source, target: edge.target, id: edge.id });
-    } else if (edge.target === startNodeId && !edge.source && !visitedNodes.has(edge.source) && !edge.directed) { // Undirected
+    } else if (edge.target === startNodeId && !edge.source && !visitedNodes.has(edge.source) && !edge.directed) { 
       edgeCandidates.push({ weight: edge.weight || 0, source: edge.target, target: edge.source, id: edge.id });
     }
   });
@@ -77,13 +77,14 @@ export function* primGenerator(
 
 
   while (edgeCandidates.length > 0 && mstEdges.length < nodes.length - 1) {
-    const bestCandidate = edgeCandidates.shift(); // Get minimum weight edge
+    const bestCandidate = edgeCandidates.shift(); 
     if (!bestCandidate) break; 
 
-    // The target of this edge is the node we are trying to add to visited set
+    
+    
     const { weight, source: u, target: v, id: edgeId } = bestCandidate;
 
-    if (visitedNodes.has(v)) { // If target already visited (e.g. parallel edges or complex scenario)
+    if (visitedNodes.has(v)) { 
        yield {
         nodes: [...nodes],
         edges: [...edges],
@@ -92,7 +93,7 @@ export function* primGenerator(
         highlights: createHighlights(visitedNodes, edgeCandidates.map(ec => ec.id), edgeId),
         mstWeight,
       };
-      continue; // Skip this edge
+      continue; 
     }
     
     yield {
@@ -114,13 +115,13 @@ export function* primGenerator(
       edges: [...edges],
       message: `Added edge ${edgeId} and node ${v} to MST. Current MST weight: ${mstWeight.toFixed(2)}.`,
       isFinalStep: false,
-      highlights: createHighlights(visitedNodes, edgeCandidates.map(ec => ec.id)), // Highlights updated MST
+      highlights: createHighlights(visitedNodes, edgeCandidates.map(ec => ec.id)), 
       mstWeight,
     };
     
-    if (mstEdges.length === nodes.length -1) break; // MST complete
+    if (mstEdges.length === nodes.length -1) break; 
 
-    // Add new candidate edges from the newly added node v
+    
     edges.forEach(edge => {
       if (edge.source === v && !visitedNodes.has(edge.target)) {
         edgeCandidates.push({ weight: edge.weight || 0, source: edge.source, target: edge.target, id: edge.id });
@@ -128,7 +129,7 @@ export function* primGenerator(
         edgeCandidates.push({ weight: edge.weight || 0, source: edge.target, target: edge.source, id: edge.id });
       }
     });
-    edgeCandidates.sort((a, b) => a.weight - b.weight); // Re-sort after adding new candidates
+    edgeCandidates.sort((a, b) => a.weight - b.weight); 
     
      yield {
       nodes: [...nodes],
@@ -149,7 +150,7 @@ export function* primGenerator(
     edges: [...edges],
     message: finalMessage,
     isFinalStep: true,
-    highlights: createHighlights(visitedNodes, []), // Show final MST
+    highlights: createHighlights(visitedNodes, []), 
     mstWeight,
   };
   yield finalStep;

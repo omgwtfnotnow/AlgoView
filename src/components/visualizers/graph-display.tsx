@@ -26,7 +26,7 @@ const highlightColorMapping: Record<GraphHighlightColor, { fill: string; stroke:
   accent: { fill: 'hsl(var(--accent))', stroke: 'hsl(var(--accent))', text: 'hsl(var(--accent-foreground))' },
   destructive: { fill: 'hsl(var(--destructive))', stroke: 'hsl(var(--destructive))', text: 'hsl(var(--destructive-foreground))' },
   visited: { fill: 'hsl(240 60% 70%)', stroke: 'hsl(240 60% 50%)', text: 'hsl(var(--primary-foreground))' },
-  path: { fill: 'hsl(120 70% 45%)', stroke: 'hsl(120 70% 35%)', text: 'hsl(var(--primary-foreground))' }, // Also used for MST edges/nodes
+  path: { fill: 'hsl(120 70% 45%)', stroke: 'hsl(120 70% 35%)', text: 'hsl(var(--primary-foreground))' }, 
   info: { fill: 'hsl(48 100% 70%)', stroke: 'hsl(48 100% 50%)', text: 'hsl(var(--popover-foreground))' },
   muted: { fill: 'hsl(var(--muted))', stroke: 'hsl(var(--border))', text: 'hsl(var(--muted-foreground))' },
 };
@@ -85,7 +85,7 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
     return step.highlights.find(h => h.type === 'edge' && h.id === edgeId);
   };
 
-  const nodeIds = step.nodes.map(n => n.id).sort((a,b) => { // Sort numerically if possible (e.g. n0, n1, n10)
+  const nodeIds = step.nodes.map(n => n.id).sort((a,b) => { 
       const numA = parseInt(a.replace('n',''));
       const numB = parseInt(b.replace('n',''));
       if(!isNaN(numA) && !isNaN(numB)) return numA - numB;
@@ -126,7 +126,7 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
             const midY = (y1 + y2) / 2;
 
             let markerEndUrl = '';
-            // For MST algorithms, edges are typically undirected in the MST context, so no arrowheads for 'path' color
+            
             if (edge.directed && (!isMstAlgorithm || highlight?.color !== 'path')) {
                 if (highlight?.color === 'path') markerEndUrl = 'url(#arrowhead-path)';
                 else if (highlight?.color === 'primary') markerEndUrl = 'url(#arrowhead-primary)';

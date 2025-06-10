@@ -43,3 +43,28 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+.idx
+
+# Node modules
+node_modules/
+
+# Production build
+.next/
+
+# Environment variables
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional: OS / Editor junk
+.DS_Store
+.vscode/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Output from testing or temp tools (if used)
+coverage/

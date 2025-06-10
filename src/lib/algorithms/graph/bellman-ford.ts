@@ -52,17 +52,17 @@ export function* bellmanFordGenerator(
       const label = distances[n.id] === Infinity ? '∞' : String(distances[n.id]);
 
       if (n.id === updatedNodeId) {
-        color = 'primary'; // Node whose distance was just updated
+        color = 'primary'; 
       } else if (n.id === negativeCycleNodeId) {
-        color = 'destructive'; // Node identified as part of a negative cycle
+        color = 'destructive'; 
       } else if (predecessors[n.id] !== null || n.id === startNodeId) {
-        color = 'visited'; // Nodes that are reachable / have a distance
+        color = 'visited'; 
       }
       return { id: n.id, type: 'node', color, label };
     }).concat(edges.map(e => {
       let color: GraphHighlightColor = 'neutral';
       if (e.id === currentEdgeId) {
-        color = isNegativeCycleCheck ? 'destructive' : 'secondary'; // Edge being processed or checked for neg cycle
+        color = isNegativeCycleCheck ? 'destructive' : 'secondary'; 
       }
       return { id: e.id, type: 'edge', color };
     }));
@@ -78,7 +78,7 @@ export function* bellmanFordGenerator(
     highlights: createHighlights(),
   };
 
-  // Step 1: Relax edges repeatedly
+  
   for (let i = 0; i < nodes.length - 1; i++) {
     let relaxedThisPass = false;
     yield {
@@ -94,9 +94,9 @@ export function* bellmanFordGenerator(
     for (const edge of edges) {
       const u = edge.source;
       const v = edge.target;
-      const weight = edge.weight || 0; // Assuming 0 if undefined, adjust as needed
+      const weight = edge.weight || 0; 
 
-      yield { // Highlight edge being considered
+      yield { 
         nodes: [...nodes],
         edges: [...edges],
         distances: { ...distances },
@@ -121,21 +121,21 @@ export function* bellmanFordGenerator(
         };
       }
     }
-    if (!relaxedThisPass && i < nodes.length -2) { // Optimization: if no relaxation in a full pass (except the last one), done early
+    if (!relaxedThisPass && i < nodes.length -2) { 
         yield {
             nodes: [...nodes],
             edges: [...edges],
             distances: { ...distances },
             predecessors: { ...predecessors },
             message: `Pass ${i + 1}: No distances updated in this pass. Shortest paths found. Checking for negative cycles next.`,
-            isFinalStep: false, // Not final yet, need to check for neg cycles
+            isFinalStep: false, 
             highlights: createHighlights(undefined, undefined, i + 1),
         };
-        break; // Go to negative cycle check
+        break; 
     }
   }
 
-  // Step 2: Check for negative-weight cycles
+  
   yield {
     nodes: [...nodes],
     edges: [...edges],
@@ -152,24 +152,24 @@ export function* bellmanFordGenerator(
     const weight = edge.weight || 0;
 
     if (distances[u] !== Infinity && distances[u] + weight < distances[v]) {
-      // Negative cycle detected
-      // Try to trace back the cycle for highlighting (simplified)
+      
+      
       let cycleNode = v;
       const path = new Set<string>();
-      for(let k=0; k<nodes.length; ++k) { // Limit search to V steps to avoid infinite loop if predecessors form a complex structure
+      for(let k=0; k<nodes.length; ++k) { 
         path.add(cycleNode);
         if(predecessors[cycleNode] === null) break;
         cycleNode = predecessors[cycleNode]!;
-        if(path.has(cycleNode)) break; // Found a cycle start
+        if(path.has(cycleNode)) break; 
       }
       
       const finalHighlights = createHighlights(edge.id, v, undefined, true, v);
-      // Highlight nodes in the detected cycle path part
+      
       path.forEach(nodeId => {
         const nodeIdx = finalHighlights.findIndex(h => h.id === nodeId && h.type === 'node');
         if(nodeIdx !== -1) finalHighlights[nodeIdx].color = 'destructive';
       });
-      // Highlight the edge that confirms the cycle
+      
       const edgeIdx = finalHighlights.findIndex(h => h.id === edge.id && h.type === 'edge');
       if(edgeIdx !== -1) finalHighlights[edgeIdx].color = 'destructive';
 
@@ -200,13 +200,13 @@ export function* bellmanFordGenerator(
       finalPathNodes = [];
       finalPathEdges = [];
       let curr: string | null = targetNodeId;
-      const pathTraceSet = new Set<string>(); // To detect cycles during path reconstruction
+      const pathTraceSet = new Set<string>(); 
       while (curr && curr !== startNodeId && !pathTraceSet.has(curr)) {
         pathTraceSet.add(curr);
         finalPathNodes.unshift(curr);
         const predNode = predecessors[curr];
         if (predNode) {
-           const edgeToHighlight = edges.find(e => (e.source === predNode && e.target === curr) || (e.target === predNode && e.source === curr && !e.directed)); // Adapts for undirected in display
+           const edgeToHighlight = edges.find(e => (e.source === predNode && e.target === curr) || (e.target === predNode && e.source === curr && !e.directed)); 
            if (edgeToHighlight) {
                 finalPathEdges.unshift(edgeToHighlight.id);
            }
@@ -215,11 +215,11 @@ export function* bellmanFordGenerator(
       }
       if (curr === startNodeId) {
          finalPathNodes.unshift(startNodeId);
-      } else if (pathTraceSet.has(curr!)) { // Cycle in predecessor path for target
+      } else if (pathTraceSet.has(curr!)) { 
         finalMessage = `Path to target ${targetNodeId} involves a cycle (likely due to earlier state if negative cycle wasn't global). Distance ${distances[targetNodeId]} shown, but path reconstruction complex.`;
-        finalPathNodes = undefined; // Clear path as it's problematic
+        finalPathNodes = undefined; 
         finalPathEdges = undefined;
-      } else if (finalPathNodes.length === 0 && startNodeId !== targetNodeId) { // Path reconstruction failed
+      } else if (finalPathNodes.length === 0 && startNodeId !== targetNodeId) { 
         finalMessage = `Could not reconstruct path to ${targetNodeId}, though distance is ${distances[targetNodeId]}.`;
         finalPathNodes = undefined;
         finalPathEdges = undefined;
@@ -231,7 +231,7 @@ export function* bellmanFordGenerator(
   }
 
   const finalStepHighlights = createHighlights();
-  // Override highlights for path if found
+  
    if (finalPathNodes && finalPathEdges) {
     finalPathNodes.forEach(nodeId => {
       const nodeIdx = finalStepHighlights.findIndex(h => h.id === nodeId && h.type === 'node');

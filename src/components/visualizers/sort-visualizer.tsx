@@ -44,7 +44,7 @@ const sortAlgorithms: Record<SortAlgorithmKey, Algorithm & { generator: (arr: nu
 
 export const SortVisualizer: React.FC = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<SortAlgorithmKey>('bubble-sort');
-  const [array, setArray] = useState<number[]>(generateRandomArray(10,100));
+  const [array, setArray] = useState<number[]>([]);
   const [currentStep, setCurrentStep] = useState<SortStep | null>(null);
   const [dataSize, setDataSize] = useState(10);
   const [maxArrayValue, setMaxArrayValue] = useState(100);
@@ -59,7 +59,7 @@ export const SortVisualizer: React.FC = () => {
     const firstStep = algorithmInstanceRef.current.next().value as SortStep;
     setCurrentStep(firstStep);
     setIsFinished(firstStep?.isFinalStep || false);
-  }, [array, selectedAlgorithm, setCurrentStep, setIsFinished]);
+  }, [array, selectedAlgorithm]);
 
   const resetVisualization = useCallback(() => {
     initializeAlgorithm();
@@ -86,20 +86,12 @@ export const SortVisualizer: React.FC = () => {
   const nextStep = useCallback(() => {
     if (!algorithmInstanceRef.current) {
         initializeAlgorithm();
-        // If initializeAlgorithm directly leads to a final step (e.g. empty array), reflect this.
-        if (algorithmInstanceRef.current) {
-            const initialStep = algorithmInstanceRef.current.next().value as SortStep;
-             if (initialStep && initialStep.isFinalStep) {
-                setCurrentStep(initialStep);
-                setIsFinished(true);
-                return false;
-             }
-        } else {
-             return false; // Should not happen if initializeAlgorithm works
+        if (currentStep && currentStep.isFinalStep) {
+            return false; 
         }
     }
     
-    if (algorithmInstanceRef.current) {
+    if (algorithmInstanceRef.current && !currentStep?.isFinalStep) {
       const next = algorithmInstanceRef.current.next();
       if (!next.done) {
         const stepData = next.value as SortStep;
@@ -114,7 +106,7 @@ export const SortVisualizer: React.FC = () => {
       }
     }
     return false;
-  }, [initializeAlgorithm, setCurrentStep, setIsFinished]);
+  }, [initializeAlgorithm, currentStep]);
 
   const handleDataSizeChange = (size: number) => {
     setDataSize(size);

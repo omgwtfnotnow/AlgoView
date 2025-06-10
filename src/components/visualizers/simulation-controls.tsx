@@ -47,7 +47,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
             value={[dataSize]}
             onValueChange={handleDataSizeSliderChange}
             className="mt-2"
-            disabled={false} // No longer disabled by isPlaying
+            disabled={false} 
           />
         </div>
         {algorithmType === 'search' && onTargetValueChange && (
@@ -60,7 +60,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
               onChange={(e) => onTargetValueChange(parseInt(e.target.value, 10))}
               placeholder="Enter number"
               className="mt-2"
-              disabled={false} // No longer disabled by isPlaying
+              disabled={false} 
             />
           </div>
         )}
@@ -70,7 +70,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
         <Button onClick={onNextStep} disabled={isFinished} variant="outline">
           <SkipForward className="mr-2 h-4 w-4" /> Next Step
         </Button>
-         <Button onClick={onGenerateNewArray} variant="outline" disabled={false /* No longer disabled by isPlaying*/}>
+         <Button onClick={onGenerateNewArray} variant="outline" disabled={false }>
           <Shuffle className="mr-2 h-4 w-4" /> New Array
         </Button>
         <Button onClick={onReset} variant="destructive">

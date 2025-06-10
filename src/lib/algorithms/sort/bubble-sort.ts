@@ -44,7 +44,7 @@ export function* bubbleSortGenerator(
       };
       if (array[j] > array[j + 1]) {
         yield {
-          array: [...array], // State before swap, highlighting for swap
+          array: [...array], 
           comparing: [j, j+1],
           swapping: [j, j + 1],
           message: `Swapping ${array[j]} and ${array[j + 1]}.`,
@@ -54,7 +54,7 @@ export function* bubbleSortGenerator(
         swap(array, j, j + 1);
         swapped = true;
         yield {
-          array: [...array], // State after swap
+          array: [...array], 
           comparing: [j, j+1],
           message: `Elements ${array[j+1]} and ${array[j]} swapped (original values).`,
           isFinalStep: false,
@@ -70,7 +70,7 @@ export function* bubbleSortGenerator(
       highlights: getHighlights(i, undefined, false, sortedElementsCount),
     };
     if (!swapped) {
-      // Optimization: if no swaps in a pass, array is sorted
+      
       break;
     }
   }

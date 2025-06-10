@@ -13,8 +13,8 @@ const colorMap: Record<VisualizerStep['highlights'][0]['color'], string> = {
   accent: 'bg-accent',
   destructive: 'bg-destructive',
   muted: 'bg-muted',
-  neutral: 'bg-gray-400 dark:bg-gray-600', // A neutral default
-  info: 'bg-blue-400 dark:bg-blue-600' // Example for info highlight
+  neutral: 'bg-gray-400 dark:bg-gray-600', 
+  info: 'bg-blue-400 dark:bg-blue-600' 
 };
 
 export const ArrayDisplay: React.FC<ArrayDisplayProps> = ({ step, maxArrayValue }) => {

@@ -16,7 +16,7 @@ export function* floydWarshallGenerator(
   const distanceMatrix: Record<string, Record<string, number | typeof Infinity>> = {};
   const nextHopMatrix: Record<string, Record<string, string | null>> = {};
 
-  // Initialization
+  
   for (const id1 of nodeIds) {
     distanceMatrix[id1] = {};
     nextHopMatrix[id1] = {};
@@ -35,11 +35,11 @@ export function* floydWarshallGenerator(
     const u = edge.source;
     const v = edge.target;
     const weight = edge.weight === undefined ? 1 : edge.weight;
-    if (distanceMatrix[u][v] > weight) { // Handle parallel edges by taking the minimum
+    if (distanceMatrix[u][v] > weight) { 
         distanceMatrix[u][v] = weight;
         nextHopMatrix[u][v] = v;
     }
-    if (!edge.directed && distanceMatrix[v][u] > weight) { // For undirected graphs
+    if (!edge.directed && distanceMatrix[v][u] > weight) { 
         distanceMatrix[v][u] = weight;
         nextHopMatrix[v][u] = u;
     }
@@ -60,7 +60,7 @@ export function* floydWarshallGenerator(
     highlights: createInitialHighlights(),
   };
 
-  // Main Floyd-Warshall loops
+  
   for (let kIdx = 0; kIdx < numNodes; kIdx++) {
     const kNodeId = nodeIds[kIdx];
     for (let iIdx = 0; iIdx < numNodes; iIdx++) {
@@ -70,13 +70,13 @@ export function* floydWarshallGenerator(
 
         const currentHighlights: GraphElementHighlight[] = nodes.map(n => {
             let color: GraphHighlightColor = 'neutral';
-            if (n.id === kNodeId) color = 'secondary'; // Intermediate node k
-            else if (n.id === iNodeId) color = 'primary';   // Source node i
-            else if (n.id === jNodeId && iNodeId !== jNodeId) color = 'info';      // Destination node j
+            if (n.id === kNodeId) color = 'secondary'; 
+            else if (n.id === iNodeId) color = 'primary';   
+            else if (n.id === jNodeId && iNodeId !== jNodeId) color = 'info';      
             return { id: n.id, type: 'node', color, label: n.label || n.id };
         }).concat(edges.map(e => ({id: e.id, type: 'edge', color: 'neutral'})));
         
-        // Highlight edges forming path i->k and k->j if they exist conceptually
+        
         const ikEdge = edges.find(e => (e.source === iNodeId && e.target === kNodeId) || (!e.directed && e.source === kNodeId && e.target === iNodeId));
         const kjEdge = edges.find(e => (e.source === kNodeId && e.target === jNodeId) || (!e.directed && e.source === jNodeId && e.target === kNodeId));
         if(ikEdge) {
@@ -110,7 +110,7 @@ export function* floydWarshallGenerator(
           nextHopMatrix[iNodeId][jNodeId] = nextHopMatrix[iNodeId][kNodeId];
 
           const updatedHighlights = [...currentHighlights];
-          // Highlight path i->j if it exists as a direct edge, to show it's being updated
+          
             const ijEdge = edges.find(e => (e.source === iNodeId && e.target === jNodeId) || (!e.directed && e.source === jNodeId && e.target === iNodeId));
             if(ijEdge){
                 const hIdx = updatedHighlights.findIndex(h => h.id === ijEdge.id && h.type==='edge');
@@ -135,7 +135,7 @@ export function* floydWarshallGenerator(
     }
   }
 
-  // Check for negative cycles
+  
   for (let i = 0; i < numNodes; i++) {
     if (distanceMatrix[nodeIds[i]][nodeIds[i]] < 0) {
       const finalStepNegativeCycle: GraphStep = {
@@ -161,7 +161,7 @@ export function* floydWarshallGenerator(
     nextHopMatrix: JSON.parse(JSON.stringify(nextHopMatrix)),
     message: "Floyd-Warshall algorithm complete. All-pairs shortest paths computed.",
     isFinalStep: true,
-    highlights: createInitialHighlights(), // Reset highlights or show final state
+    highlights: createInitialHighlights(), 
   };
   yield finalStep;
   return finalStep;

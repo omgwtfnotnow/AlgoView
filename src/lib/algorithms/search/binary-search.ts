@@ -1,7 +1,7 @@
 import type { SearchStep } from '@/types';
 
 export function* binarySearchGenerator(
-  array: number[], // Must be sorted for binary search to work
+  array: number[], 
   target: number
 ): Generator<SearchStep, SearchStep, void> {
   let low = 0;
@@ -13,8 +13,8 @@ export function* binarySearchGenerator(
       if (i === currentMid) return { index: i, color: 'primary', label: 'Mid' };
       if (i === currentLow) return { index: i, color: 'secondary', label: 'Low' };
       if (i === currentHigh) return { index: i, color: 'secondary', label: 'High' };
-      if (i >= currentLow && i <= currentHigh) return { index: i, color: 'info' }; // Active search range
-      return { index: i, color: 'muted' }; // Outside search range
+      if (i >= currentLow && i <= currentHigh) return { index: i, color: 'info' }; 
+      return { index: i, color: 'muted' }; 
     });
   };
 

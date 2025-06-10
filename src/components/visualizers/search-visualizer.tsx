@@ -36,7 +36,7 @@ const searchAlgorithms: Record<SearchAlgorithmKey, Algorithm & { generator: (arr
 
 export const SearchVisualizer: React.FC = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<SearchAlgorithmKey>('linear-search');
-  const [array, setArray] = useState<number[]>(generateRandomArray(10, 100));
+  const [array, setArray] = useState<number[]>([]);
   const [target, setTarget] = useState<number | undefined>(undefined);
   const [currentStep, setCurrentStep] = useState<SearchStep | null>(null);
   const [dataSize, setDataSize] = useState(10);
@@ -71,7 +71,7 @@ export const SearchVisualizer: React.FC = () => {
     const firstStep = algorithmInstanceRef.current.next().value as SearchStep;
     setCurrentStep(firstStep);
     setIsFinished(firstStep?.isFinalStep || false);
-  }, [array, target, selectedAlgorithm, toast, setCurrentStep, setIsFinished]);
+  }, [array, target, selectedAlgorithm, toast]);
 
   const resetVisualization = useCallback(() => {
     initializeAlgorithm();
@@ -100,16 +100,8 @@ export const SearchVisualizer: React.FC = () => {
     if (!algorithmInstanceRef.current) {
         if (target !== undefined) {
             initializeAlgorithm();
-            // After initializing, if it's already the final step, don't proceed further.
-            // This handles cases where target is immediately found/not found or array is empty.
-             if (algorithmInstanceRef.current) {
-                const initialStep = algorithmInstanceRef.current.next().value as SearchStep;
-                 if (initialStep && initialStep.isFinalStep) {
-                    setCurrentStep(initialStep);
-                    setIsFinished(true);
-                    return false;
-                 }
-             } else { // if target was undefined, initializeAlgorithm sets a message and finishes.
+            
+             if (currentStep && currentStep.isFinalStep) {
                 return false;
              }
         } else {
@@ -124,7 +116,7 @@ export const SearchVisualizer: React.FC = () => {
         }
     }
 
-    if (algorithmInstanceRef.current) {
+    if (algorithmInstanceRef.current && !currentStep?.isFinalStep) {
       const next = algorithmInstanceRef.current.next();
       if (!next.done) {
         const stepData = next.value as SearchStep;
@@ -139,7 +131,7 @@ export const SearchVisualizer: React.FC = () => {
       }
     }
     return false;
-  }, [initializeAlgorithm, target, array, setCurrentStep, setIsFinished]);
+  }, [initializeAlgorithm, target, array, currentStep]);
   
   const handleDataSizeChange = (size: number) => {
     setDataSize(size);

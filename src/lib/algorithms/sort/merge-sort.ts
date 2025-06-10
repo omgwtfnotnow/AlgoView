@@ -5,8 +5,8 @@ function* merge(
   left: number,
   mid: number,
   right: number,
-  originalFullArrayRef: number[], // Reference to the original array for full highlights
-  mainArrayOffset: number // Offset if merging a sub-array relative to the original
+  originalFullArrayRef: number[], 
+  mainArrayOffset: number 
 ): Generator<SortStep, void, void> {
   const n1 = mid - left + 1;
   const n2 = right - mid;
@@ -30,9 +30,9 @@ function* merge(
     }),
   };
 
-  let i = 0; // Initial index of first subarray
-  let j = 0; // Initial index of second subarray
-  let k = left; // Initial index of merged subarray
+  let i = 0; 
+  let j = 0; 
+  let k = left; 
 
   while (i < n1 && j < n2) {
     yield {
@@ -49,21 +49,21 @@ function* merge(
     };
     if (L[i] <= R[j]) {
       array[k] = L[i];
-      originalFullArrayRef[k + mainArrayOffset] = L[i]; // Update the main array reference
+      originalFullArrayRef[k + mainArrayOffset] = L[i]; 
       i++;
     } else {
       array[k] = R[j];
-      originalFullArrayRef[k + mainArrayOffset] = R[j]; // Update the main array reference
+      originalFullArrayRef[k + mainArrayOffset] = R[j]; 
       j++;
     }
     k++;
-    yield { // Show array after placement
+    yield { 
       array: [...originalFullArrayRef],
       message: `Element placed. Array segment being merged: [${array.slice(left, k).join(', ')}]`,
       isFinalStep: false,
       subArrayBounds: currentBounds,
       highlights: originalFullArrayRef.map((val, idx) => {
-         if (idx === (k-1) + mainArrayOffset) return { index:idx, color: 'accent' }; // Highlight newly placed
+         if (idx === (k-1) + mainArrayOffset) return { index:idx, color: 'accent' }; 
          if (idx >= currentBounds.start && idx <= currentBounds.end) return { index: idx, color: 'primary' };
          return { index: idx, color: 'neutral' };
       }),
@@ -111,22 +111,22 @@ function* merge(
       isFinalStep: false,
       subArrayBounds: currentBounds,
       highlights: originalFullArrayRef.map((_, idx) => {
-        if (idx >= currentBounds.start && idx <= currentBounds.end) return { index: idx, color: 'accent' }; // Merged part
+        if (idx >= currentBounds.start && idx <= currentBounds.end) return { index: idx, color: 'accent' }; 
         return { index: idx, color: 'neutral' };
       }),
     };
 }
 
 function* mergeSortRecursive(
-  array: number[], // This is the subarray being sorted currently
+  array: number[], 
   left: number,
   right: number,
-  originalFullArrayRef: number[], // Full original array reference
-  mainArrayOffset: number // Offset of this subarray from the start of the originalFullArrayRef
+  originalFullArrayRef: number[], 
+  mainArrayOffset: number 
 ): Generator<SortStep, void, void> {
   if (left >= right) {
-    // Base case: array of size 0 or 1 is sorted
-    if (left === right) { // single element is "sorted" in its context
+    
+    if (left === right) { 
        yield {
         array: [...originalFullArrayRef],
         message: `Base case: element at index ${left + mainArrayOffset} is a subarray of size 1.`,
@@ -161,19 +161,18 @@ function* mergeSortRecursive(
 export function* mergeSortGenerator(
   inputArray: number[]
 ): Generator<SortStep, SortStep, void> {
-  const arrayCopy = [...inputArray]; // This will be modified by mergeSortRecursive and merge
+  const arrayCopy = [...inputArray]; 
   
   yield {
-    array: [...inputArray], // Initial state
+    array: [...inputArray], 
     message: 'Starting Merge Sort.',
     isFinalStep: false,
     highlights: inputArray.map((_, i) => ({ index: i, color: 'neutral' })),
   };
 
-  // The `arrayCopy` passed to mergeSortRecursive will be the actual working array for sorting logic.
-  // We pass `inputArray` as originalFullArrayRef so that highlights are always on a non-mutating reference if needed,
-  // but here we want highlights on the sorting array. So we will pass arrayCopy for both.
-  // The merge function modifies `arrayCopy` (its local `array` param) and also `originalFullArrayRef` to reflect changes.
+  
+  
+  
   yield* mergeSortRecursive(arrayCopy, 0, arrayCopy.length - 1, arrayCopy, 0);
 
   const finalStep = {

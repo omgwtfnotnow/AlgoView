@@ -7,7 +7,7 @@ function* partition(
   high: number
 ): Generator<SortStep, number, void> {
   const pivot = array[high];
-  let i = low - 1; // Index of smaller element
+  let i = low - 1; 
 
   yield {
     array: [...array],
@@ -32,8 +32,8 @@ function* partition(
       isFinalStep: false,
       highlights: array.map((_, k) => {
         if (k === high) return { index: k, color: 'destructive', label: 'Pivot' };
-        if (k === j) return { index: k, color: 'secondary' }; // Current element
-        if (k <= i && k >= low) return { index: k, color: 'info' }; // Elements smaller than pivot
+        if (k === j) return { index: k, color: 'secondary' }; 
+        if (k <= i && k >= low) return { index: k, color: 'info' }; 
         if (k >= low && k <= high) return { index: k, color: 'primary' };
         return { index: k, color: 'neutral' };
       }),
@@ -42,7 +42,7 @@ function* partition(
     if (array[j] < pivot) {
       i++;
       yield {
-        array: [...array], // State before swap
+        array: [...array], 
         pivotIndex: high,
         swapping: [i,j],
         subArrayBounds: { start: low, end: high },
@@ -50,14 +50,14 @@ function* partition(
         isFinalStep: false,
         highlights: array.map((_, k) => {
           if (k === high) return { index: k, color: 'destructive', label: 'Pivot' };
-          if (k === i || k ===j) return { index: k, color: 'accent' }; // Swapping
+          if (k === i || k ===j) return { index: k, color: 'accent' }; 
           if (k < i && k >=low ) return { index: k, color: 'info' };
           if (k >= low && k <= high) return { index: k, color: 'primary' };
           return { index: k, color: 'neutral' };
         }),
       };
       swap(array, i, j);
-      yield { // State after swap
+      yield { 
         array: [...array],
         pivotIndex: high,
         subArrayBounds: { start: low, end: high },
@@ -73,7 +73,7 @@ function* partition(
     }
   }
   
-  yield { // State before final pivot swap
+  yield { 
     array: [...array],
     pivotIndex: high,
     swapping: [i+1, high],
@@ -81,7 +81,7 @@ function* partition(
     message: `Placing pivot ${pivot} in its sorted position. Swapping ${array[i+1]} (at index ${i+1}) and ${array[high]} (pivot at index ${high}).`,
     isFinalStep: false,
     highlights: array.map((_, k) => {
-      if (k === high || k === i+1) return { index: k, color: 'accent' }; // Pivot and swap target
+      if (k === high || k === i+1) return { index: k, color: 'accent' }; 
       if (k <= i && k >= low) return { index: k, color: 'info' };
       if (k >= low && k <= high) return { index: k, color: 'primary' };
       return { index: k, color: 'neutral' };
@@ -89,16 +89,16 @@ function* partition(
   };
   swap(array, i + 1, high);
   const pivotFinalIndex = i + 1;
-  yield { // State after final pivot swap
+  yield { 
     array: [...array],
     pivotIndex: pivotFinalIndex,
     subArrayBounds: { start: low, end: high },
     message: `Pivot ${array[pivotFinalIndex]} (original pivot) is now at its sorted position: index ${pivotFinalIndex}.`,
-    isFinalStep: false, // Partitioning itself is not the final step of sort
+    isFinalStep: false, 
     highlights: array.map((_, k) => {
       if (k === pivotFinalIndex) return { index: k, color: 'accent', label: 'Sorted Pivot' };
-      if (k < pivotFinalIndex && k >= low) return { index: k, color: 'info' }; // Left partition
-      if (k > pivotFinalIndex && k <= high) return { index: k, color: 'primary' }; // Right partition
+      if (k < pivotFinalIndex && k >= low) return { index: k, color: 'info' }; 
+      if (k > pivotFinalIndex && k <= high) return { index: k, color: 'primary' }; 
       return { index: k, color: 'neutral' };
     }),
   };
@@ -125,23 +125,23 @@ function* quickSortRecursive(
     };
 
     const pivotIndex = yield* partition(array, low, high);
-    sortedIndices.add(pivotIndex); // Mark pivot as sorted
+    sortedIndices.add(pivotIndex); 
     
-    yield { // Show array after partition, pivot is sorted
+    yield { 
       array: [...array],
       message: `Pivot at index ${pivotIndex} is sorted. Recursively sorting left and right partitions.`,
       isFinalStep: false,
       highlights: array.map((_, k) => {
         if (k === pivotIndex) return { index: k, color: 'accent', label: 'Sorted' };
-        if (k >= low && k < pivotIndex) return { index: k, color: 'info' }; // Left partition
-        if (k > pivotIndex && k <= high) return { index: k, color: 'primary' }; // Right partition
+        if (k >= low && k < pivotIndex) return { index: k, color: 'info' }; 
+        if (k > pivotIndex && k <= high) return { index: k, color: 'primary' }; 
         return { index: k, color: 'neutral' };
       }),
     };
 
     yield* quickSortRecursive(array, low, pivotIndex - 1, sortedIndices);
     yield* quickSortRecursive(array, pivotIndex + 1, high, sortedIndices);
-  } else if (low === high) { // Single element subarray is sorted
+  } else if (low === high) { 
     sortedIndices.add(low);
      yield {
       array: [...array],

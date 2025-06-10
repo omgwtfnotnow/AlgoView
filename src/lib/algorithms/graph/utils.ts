@@ -7,13 +7,13 @@ export function generateRandomGraph(
   maxWeight: number = 10,
   directed: boolean = false,
   allowNegativeWeights: boolean = false,
-  minWeight?: number // If allowNegativeWeights is true, this can be negative
+  minWeight?: number 
 ): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
-  const edgeSet = new Set<string>(); // To avoid duplicate edges
+  const edgeSet = new Set<string>(); 
 
-  // For A* heuristic, assign random X/Y coordinates
+  
   const maxXCoord = 100;
   const maxYCoord = 100;
 
@@ -38,14 +38,14 @@ export function generateRandomGraph(
     let targetIndex = Math.floor(Math.random() * numNodes);
 
     let tries = 0;
-    // Avoid self-loops and duplicate edges
+    
     while ((sourceIndex === targetIndex || edgeSet.has(`${sourceIndex}-${targetIndex}`) || (!directed && edgeSet.has(`${targetIndex}-${sourceIndex}`))) && tries < numNodes * numNodes * 2) { 
       sourceIndex = Math.floor(Math.random() * numNodes);
       targetIndex = Math.floor(Math.random() * numNodes);
       tries++;
     }
     
-    // If couldn't find a valid edge after many tries (e.g., dense graph, few nodes), skip this edge
+    
     if (sourceIndex === targetIndex && numNodes > 1 && tries >= numNodes * numNodes * 2) continue; 
 
     if (!edgeSet.has(`${sourceIndex}-${targetIndex}`) && (directed || !edgeSet.has(`${targetIndex}-${sourceIndex}`))) {

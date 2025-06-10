@@ -5,7 +5,7 @@ export function* dijkstraGenerator(
   nodes: GraphNode[],
   edges: GraphEdge[],
   startNodeId: string,
-  targetNodeId?: string // Optional target node
+  targetNodeId?: string 
 ): Generator<GraphStep, GraphStep | undefined, void> {
   if (!nodes.find(n => n.id === startNodeId)) {
     const errorStep: GraphStep = {
@@ -34,7 +34,7 @@ export function* dijkstraGenerator(
   const distances: Record<string, number> = {};
   const predecessors: Record<string, string | null> = {};
   const visited = new Set<string>();
-  const pq: { id: string; distance: number }[] = []; // Priority Queue (min-heap by distance)
+  const pq: { id: string; distance: number }[] = []; 
 
   nodes.forEach(node => {
     distances[node.id] = Infinity;
@@ -43,7 +43,7 @@ export function* dijkstraGenerator(
   distances[startNodeId] = 0;
 
   pq.push({ id: startNodeId, distance: 0 });
-  // No need to sort pq initially, the loop logic handles it
+  
 
   const createHighlights = (currentProcessingNodeId?: string, pathNodes?: string[], pathEdges?: string[]): GraphElementHighlight[] => {
     return nodes.map(n => {
@@ -80,10 +80,10 @@ export function* dijkstraGenerator(
   };
 
   while (pq.length > 0) {
-    pq.sort((a, b) => a.distance - b.distance); // Re-sort to simulate min-priority queue
-    const { id: u } = pq.shift()!; // Get node with smallest distance
+    pq.sort((a, b) => a.distance - b.distance); 
+    const { id: u } = pq.shift()!; 
 
-    if (visited.has(u)) continue; // Already processed this node with a shorter path
+    if (visited.has(u)) continue; 
     visited.add(u);
 
     yield {
@@ -98,22 +98,22 @@ export function* dijkstraGenerator(
     };
     
     if (targetNodeId && u === targetNodeId) {
-        // Target found, break loop and yield final path step
+        
         break; 
     }
 
-    // Get neighbors of u
+    
     const neighbors = edges.filter(edge => edge.source === u || (edge.target === u && !edge.directed));
     for (const edge of neighbors) {
       const v = edge.source === u ? edge.target : edge.source;
       
-      // Create highlights for examining edge
+      
       const examiningEdgeHighlights = createHighlights(u);
       const edgeHIndex = examiningEdgeHighlights.findIndex(h => h.id === edge.id && h.type === 'edge');
       if (edgeHIndex !== -1) examiningEdgeHighlights[edgeHIndex].color = 'info';
       const nodeVIndex = examiningEdgeHighlights.findIndex(h => h.id === v && h.type === 'node');
       if (nodeVIndex !== -1 && examiningEdgeHighlights[nodeVIndex].color !== 'secondary' && examiningEdgeHighlights[nodeVIndex].color !== 'visited') {
-          examiningEdgeHighlights[nodeVIndex].color = 'info'; // Highlight neighbor being considered
+          examiningEdgeHighlights[nodeVIndex].color = 'info'; 
       }
 
       yield {
@@ -127,7 +127,7 @@ export function* dijkstraGenerator(
         highlights: examiningEdgeHighlights,
       };
 
-      if (visited.has(v)) { // If neighbor already visited, skip relaxation (unless graph allows re-opening nodes, standard Dijkstra doesn't for non-negative weights)
+      if (visited.has(v)) { 
          yield {
             nodes: [...nodes],
             edges: [...edges],
@@ -136,32 +136,32 @@ export function* dijkstraGenerator(
             currentNodeId: u,
             message: `Neighbor ${v} already visited. Skipping relaxation.`,
             isFinalStep: false,
-            highlights: createHighlights(u), // Revert examining highlights
+            highlights: createHighlights(u), 
         };
         continue;
       }
 
 
-      const weight = edge.weight || 1; // Default weight to 1 if undefined
+      const weight = edge.weight || 1; 
       const altDistance = distances[u] + weight;
 
       if (altDistance < distances[v]) {
         distances[v] = altDistance;
         predecessors[v] = u;
         
-        // Remove old entry for v if exists, then add new one
+        
         const vInPqIndex = pq.findIndex(item => item.id === v);
         if (vInPqIndex > -1) pq.splice(vInPqIndex, 1);
         pq.push({ id: v, distance: altDistance });
 
         const relaxedHighlights = createHighlights(u);
         const relaxedEdgeHIndex = relaxedHighlights.findIndex(h => h.id === edge.id && h.type === 'edge');
-         if (relaxedEdgeHIndex !== -1) relaxedHighlights[relaxedEdgeHIndex].color = 'primary'; // Edge used for relaxation
+         if (relaxedEdgeHIndex !== -1) relaxedHighlights[relaxedEdgeHIndex].color = 'primary'; 
 
         const relaxedNodeVIndex = relaxedHighlights.findIndex(h => h.id === v && h.type === 'node');
         if (relaxedNodeVIndex !== -1) {
-            relaxedHighlights[relaxedNodeVIndex].label = String(altDistance); // Update label with new distance
-            relaxedHighlights[relaxedNodeVIndex].color = 'primary'; // Mark as updated in PQ
+            relaxedHighlights[relaxedNodeVIndex].label = String(altDistance); 
+            relaxedHighlights[relaxedNodeVIndex].color = 'primary'; 
         }
 
         yield {
@@ -183,7 +183,7 @@ export function* dijkstraGenerator(
             currentNodeId: u,
             message: `Path to ${v} via ${u} (cost ${altDistance}) is not shorter than current distance ${distances[v]}. No relaxation.`,
             isFinalStep: false,
-            highlights: createHighlights(u), // Revert examining highlights
+            highlights: createHighlights(u), 
         };
       }
     }
@@ -212,8 +212,8 @@ export function* dijkstraGenerator(
         }
         curr = predNode;
       }
-      if(curr === startNodeId) finalPathNodes.unshift(startNodeId); // Add start node to path
-      if(finalPathNodes.length <=1 && distances[targetNodeId] !== Infinity && startNodeId !== targetNodeId) { // Path reconstruction failed or target is start
+      if(curr === startNodeId) finalPathNodes.unshift(startNodeId); 
+      if(finalPathNodes.length <=1 && distances[targetNodeId] !== Infinity && startNodeId !== targetNodeId) { 
         finalPathNodes = undefined;
         finalPathEdges = undefined;
         if(startNodeId !== targetNodeId) finalMessage = `Could not reconstruct path to ${targetNodeId}, though it's marked reachable. Predecessor data might be incomplete.`;
@@ -242,4 +242,3 @@ export function* dijkstraGenerator(
   yield finalStep;
   return finalStep;
 }
-

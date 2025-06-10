@@ -10,10 +10,9 @@ interface ArrayBarProps {
 }
 
 export const ArrayBar: React.FC<ArrayBarProps> = ({ value, maxValue, colorClass, label, barWidth = 30 }) => {
-  const minHeight = 20; // Minimum height for visibility of value 0 or 1
-  const maxHeight = 200; // Max visual height of a bar
-  // Scale height: ensure 0 value has some visible height if needed, or handle as special case.
-  // For simplicity, let's make height proportional, with a minimum.
+  const minHeight = 20; 
+  const maxHeight = 200; 
+  
   const heightPercentage = maxValue > 0 ? (value / maxValue) * 100 : (value > 0 ? 100 : 0);
   const barHeight = Math.max(minHeight, (heightPercentage / 100) * maxHeight);
 

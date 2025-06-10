@@ -38,16 +38,16 @@ export function* kruskalGenerator(
       label: n.label || n.id,
     })).concat(edges.map(e => {
       let color: GraphHighlightColor = 'neutral';
-      if (mstEdgeIds.includes(e.id)) color = 'path'; // Edge in MST
-      else if (e.id === consideringEdgeId) color = 'secondary'; // Edge being considered
-      else if (e.id === discardedEdgeId) color = 'muted'; // Edge discarded
+      if (mstEdgeIds.includes(e.id)) color = 'path'; 
+      else if (e.id === consideringEdgeId) color = 'secondary'; 
+      else if (e.id === discardedEdgeId) color = 'muted'; 
       return { id: e.id, type: 'edge' as 'edge', color };
     }));
   };
 
   yield {
     nodes: [...nodes],
-    edges: [...edges], // Show all edges initially
+    edges: [...edges], 
     message: "Starting Kruskal's algorithm. Edges sorted by weight.",
     isFinalStep: false,
     highlights: createHighlights(),
@@ -89,7 +89,7 @@ export function* kruskalGenerator(
     }
 
     if (mstEdges.length === nodes.length - 1 && nodes.length > 0) {
-      // Optimization: if MST has V-1 edges, it's complete for a connected graph
+      
       break;
     }
   }
@@ -100,7 +100,7 @@ export function* kruskalGenerator(
   
   const finalStep: GraphStep = {
     nodes: [...nodes],
-    edges: [...edges], // Still show all edges, but highlight MST
+    edges: [...edges], 
     message: finalMessage,
     isFinalStep: true,
     highlights: createHighlights(undefined, mstEdges.map(e => e.id)),

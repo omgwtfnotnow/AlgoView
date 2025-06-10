@@ -15,7 +15,7 @@ export function* linearSearchGenerator(
 
   for (let i = 0; i < array.length; i++) {
     const currentHighlights = [...initialHighlights];
-    currentHighlights[i] = { index: i, color: 'primary' }; // Current element being checked
+    currentHighlights[i] = { index: i, color: 'primary' }; 
     
     yield {
       array: [...array],
@@ -40,7 +40,7 @@ export function* linearSearchGenerator(
       yield finalStep;
       return finalStep;
     }
-    currentHighlights[i] = { index: i, color: 'muted' }; // Mark as checked
+    currentHighlights[i] = { index: i, color: 'muted' }; 
   }
   
   const finalStepNotFound = {

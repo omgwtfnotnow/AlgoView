@@ -1,11 +1,11 @@
 
 import type { GraphStep, GraphNode, GraphEdge, GraphElementHighlight, GraphHighlightColor } from '@/types';
 
-// Heuristic function (Euclidean distance)
+
 function heuristic(nodeA: GraphNode, nodeB: GraphNode): number {
   if (nodeA.x === undefined || nodeA.y === undefined || nodeB.x === undefined || nodeB.y === undefined) {
-    // Fallback if coordinates are missing - this makes A* behave like Dijkstra
-    // console.warn("A* heuristic: Coordinates missing, using h=0.");
+    
+    
     return 0; 
   }
   return Math.sqrt(Math.pow(nodeA.x - nodeB.x, 2) + Math.pow(nodeA.y - nodeB.y, 2));
@@ -15,7 +15,7 @@ export function* aStarGenerator(
   nodes: GraphNode[],
   edges: GraphEdge[],
   startNodeId: string,
-  targetNodeId: string // Target is mandatory for A*
+  targetNodeId: string 
 ): Generator<GraphStep, GraphStep | undefined, void> {
   
   const startNode = nodes.find(n => n.id === startNodeId);
@@ -32,18 +32,18 @@ export function* aStarGenerator(
     return errorStep;
   }
 
-  const openSet: string[] = [startNodeId]; // Nodes to be evaluated
-  const cameFrom: Record<string, string> = {}; // For path reconstruction
+  const openSet: string[] = [startNodeId]; 
+  const cameFrom: Record<string, string> = {}; 
 
-  const gScore: Record<string, number> = {}; // Cost from start along best known path.
+  const gScore: Record<string, number> = {}; 
   nodes.forEach(node => gScore[node.id] = Infinity);
   gScore[startNodeId] = 0;
 
-  const fScore: Record<string, number> = {}; // Estimated total cost from start to goal through y.
+  const fScore: Record<string, number> = {}; 
   nodes.forEach(node => fScore[node.id] = Infinity);
   fScore[startNodeId] = heuristic(startNode, targetNode);
   
-  let heuristicUsedCoordinates = true; // Flag to track if heuristic used coordinates
+  let heuristicUsedCoordinates = true; 
 
   const createHighlights = (
     currentProcessingNodeId?: string,
@@ -59,7 +59,7 @@ export function* aStarGenerator(
       let h = 'N/A';
       if(hValNode && hTargetNode) {
          const hCalc = heuristic(hValNode, hTargetNode);
-         if (hValNode.x === undefined) heuristicUsedCoordinates = false; // Track if fallback was used
+         if (hValNode.x === undefined) heuristicUsedCoordinates = false; 
          h = hCalc.toFixed(1);
       }
       const f = fScore[n.id] === Infinity ? '∞' : fScore[n.id].toFixed(1);
@@ -67,11 +67,11 @@ export function* aStarGenerator(
       label += `\ng:${g} h:${h}\nf:${f}`;
 
       if (pathNodes?.includes(n.id)) color = 'path';
-      else if (n.id === currentProcessingNodeId) color = 'secondary'; // Current
-      else if (openSet.includes(n.id)) color = 'primary';         // In OpenSet
-      else if (gScore[n.id] !== Infinity && !openSet.includes(n.id)) color = 'visited'; // In ClosedSet (processed)
+      else if (n.id === currentProcessingNodeId) color = 'secondary'; 
+      else if (openSet.includes(n.id)) color = 'primary';         
+      else if (gScore[n.id] !== Infinity && !openSet.includes(n.id)) color = 'visited'; 
       
-      if (n.id === currentNeighborId && color !=='path') color = 'info'; // Examining neighbor
+      if (n.id === currentNeighborId && color !=='path') color = 'info'; 
 
       return { id: n.id, type: 'node', color, label };
     }).concat(edges.map(e => {
@@ -79,7 +79,7 @@ export function* aStarGenerator(
        if (pathNodes && cameFrom[e.target] === e.source && pathNodes.includes(e.target) && pathNodes.includes(e.source)) {
         color = 'path';
       } else if (pathNodes && cameFrom[e.source] === e.target && pathNodes.includes(e.source) && pathNodes.includes(e.target) && !e.directed) {
-        color = 'path'; // For undirected graphs path
+        color = 'path'; 
       }
       return { id: e.id, type: 'edge', color };
     }));
@@ -95,7 +95,7 @@ export function* aStarGenerator(
   yield {
     nodes: [...nodes],
     edges: [...edges],
-    distances: { ...gScore }, // gScore is equivalent to distances
+    distances: { ...gScore }, 
     fScores: { ...fScore },
     predecessors: { ...cameFrom },
     message: initialMessage,
@@ -104,7 +104,7 @@ export function* aStarGenerator(
   };
 
   while (openSet.length > 0) {
-    // Find node in openSet having the lowest fScore[] value
+    
     let currentId = openSet[0];
     for (let i = 1; i < openSet.length; i++) {
       if (fScore[openSet[i]] < fScore[currentId]) {
@@ -115,7 +115,7 @@ export function* aStarGenerator(
     const currentNode = nodes.find(n => n.id === currentId)!;
 
     if (currentId === targetNodeId) {
-      // Path found
+      
       const path: string[] = [];
       let curr = targetNodeId;
       while (cameFrom[curr]) {
@@ -138,7 +138,7 @@ export function* aStarGenerator(
       return finalStepPath;
     }
 
-    // Remove current from openSet
+    
     openSet.splice(openSet.indexOf(currentId), 1);
 
     yield {
@@ -157,7 +157,7 @@ export function* aStarGenerator(
     for (const edge of neighbors) {
       const neighborId = edge.source === currentId ? edge.target : edge.source;
       const neighborNode = nodes.find(n => n.id === neighborId)!;
-      const weight = edge.weight || 1; // Default weight
+      const weight = edge.weight || 1; 
 
       const tentativeGScore = gScore[currentId] + weight;
 
@@ -215,7 +215,7 @@ export function* aStarGenerator(
     }
   }
 
-  // Open set is empty, but goal was never reached
+  
   const finalStepFailure: GraphStep = {
     nodes: [...nodes],
     edges: [...edges],
