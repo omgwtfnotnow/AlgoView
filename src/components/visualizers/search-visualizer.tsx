@@ -12,6 +12,7 @@ import type { SearchStep, AlgorithmGenerator, SearchAlgorithmKey, Algorithm } fr
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const searchAlgorithms: Record<SearchAlgorithmKey, Algorithm & { generator: (arr: number[], target: number) => AlgorithmGenerator }> = {
   'linear-search': {
