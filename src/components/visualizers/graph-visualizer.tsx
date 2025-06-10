@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, RotateCcw, SkipForward, Shuffle } from 'lucide-react'; // Removed Waypoints
+import { AlertCircle, CheckCircle2, RotateCcw, SkipForward, Shuffle } from 'lucide-react';
 import { GraphDisplay } from './graph-display';
 import { generateRandomGraph } from '@/lib/algorithms/graph/utils';
 import { dijkstraGenerator } from '@/lib/algorithms/graph/dijkstra';
@@ -60,6 +60,7 @@ export const GraphVisualizer: React.FC = () => {
 
   const algorithmInstanceRef = useRef<AlgorithmGenerator | null>(null);
   const { toast } = useToast();
+  const isMountedRef = useRef(false); // To track if component has mounted for auto-regeneration
 
   const currentAlgorithmDetails = graphAlgorithms[selectedAlgorithmKey];
 
@@ -73,7 +74,6 @@ export const GraphVisualizer: React.FC = () => {
     if (newGraph.nodes.length > 0) {
       setStartNodeId(newGraph.nodes[0].id);
       if (newGraph.nodes.length > 1) {
-        // Try to find a target node that is not the start node
         const potentialTarget = newGraph.nodes.find(n => n.id !== newGraph.nodes[0].id);
         setTargetNodeId(potentialTarget ? potentialTarget.id : '');
       } else {
@@ -95,13 +95,25 @@ export const GraphVisualizer: React.FC = () => {
         isFinalStep: true, highlights: []
       });
     }
-    
-  }, [numNodes, numEdges]); // Add numNodes, numEdges as dependencies
+  }, [numNodes, numEdges]);
   
+  // Effect for initial graph generation
   useEffect(() => {
-    handleGenerateNewGraph(5,7); // Initial graph generation
+    handleGenerateNewGraph(5,7); // Default initial values
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only on mount to generate initial graph
+
+  // Effect for regenerating graph when numNodes or numEdges change by the user
+  useEffect(() => {
+    if (isMountedRef.current) {
+      // handleGenerateNewGraph uses current numNodes, numEdges from state
+      handleGenerateNewGraph();
+    } else {
+      isMountedRef.current = true;
+    }
+  // handleGenerateNewGraph is already memoized with numNodes, numEdges in its deps
+  // Adding numNodes and numEdges here explicitly triggers this effect when they change.
+  }, [numNodes, numEdges, handleGenerateNewGraph]);
 
 
   const initializeAlgorithm = useCallback(() => {
@@ -162,24 +174,17 @@ export const GraphVisualizer: React.FC = () => {
 
 
   const resetVisualization = useCallback(() => {
-    // Re-initialize with current graph settings, or regenerate graph if preferred
     if(graph.nodes.length > 0){
         initializeAlgorithm();
     } else {
-        handleGenerateNewGraph(); // Regenerate if graph is empty
+        handleGenerateNewGraph(); 
     }
   }, [initializeAlgorithm, handleGenerateNewGraph, graph.nodes.length]);
 
   const nextStep = useCallback(() => {
     if (!algorithmInstanceRef.current) {
       const initialized = initializeAlgorithm();
-      if (!initialized) return false; // Stop if initialization failed
-
-      // Check if init itself was final (e.g., error or immediate result)
-      // The first actual step is already yielded by initializeAlgorithm, so this call might be redundant
-      // or should only happen if currentStep is null.
-      // For now, let's assume initializeAlgorithm sets the first step.
-      // If currentStep is already final after init, no need to call next() again.
+      if (!initialized) return false; 
       if (currentStep?.isFinalStep) return false;
     }
 
@@ -193,8 +198,8 @@ export const GraphVisualizer: React.FC = () => {
             toast({ title: "Algorithm Error", description: stepData.message, variant: "destructive" });
         }
         return true;
-      } else { // Generator is done
-        const finalStepData = next.value as GraphStep | undefined; // Gen can return final step
+      } else { 
+        const finalStepData = next.value as GraphStep | undefined; 
         if (finalStepData) {
              setCurrentStep(finalStepData);
              if (finalStepData.message.toLowerCase().includes("error")) {
@@ -252,11 +257,11 @@ export const GraphVisualizer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <Label htmlFor="numNodesSlider">Number of Nodes ({numNodes})</Label>
-                <Slider id="numNodesSlider" min={2} max={15} value={[numNodes]} onValueChange={(val) => setNumNodes(val[0])} className="mt-1"/>
+                <Slider id="numNodesSlider" min={2} max={20} value={[numNodes]} onValueChange={(val) => setNumNodes(val[0])} className="mt-1"/>
             </div>
             <div>
                 <Label htmlFor="numEdgesSlider">Number of Edges ({numEdges})</Label>
-                <Slider id="numEdgesSlider" min={1} max={Math.min(30, numNodes * (numNodes -1) / 2 )} value={[numEdges]} onValueChange={(val) => setNumEdges(val[0])} className="mt-1"/>
+                <Slider id="numEdgesSlider" min={1} max={Math.min(50, numNodes * (numNodes -1) / 2 )} value={[numEdges]} onValueChange={(val) => setNumEdges(val[0])} className="mt-1"/>
             </div>
         </div>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -270,7 +275,7 @@ export const GraphVisualizer: React.FC = () => {
             </div>
         </div>
         <Button onClick={() => handleGenerateNewGraph()} variant="outline">
-          <Shuffle className="mr-2 h-4 w-4" /> Generate New Random Graph
+          <Shuffle className="mr-2 h-4 w-4" /> Generate New Random Graph Manually
         </Button>
       </Card>
       
