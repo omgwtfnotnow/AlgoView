@@ -45,5 +45,10 @@ studio/
 git clone https://github.com/omgwtfnotnow/AlgoView.git
 cd AlgoView
 
-### 2. Install Dependancies
+2. Install Dependancies
 npm install
+
+3. Run the development server
+npm run dev
+
+Visit http://localhost:3000 to view the app.
