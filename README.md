@@ -39,9 +39,10 @@ studio/
 
 ## 📦 Getting Started
 
-### 1. Clone the repo
+1. Clone the repo
 
 ```bash
+1. Clone the repo
 git clone https://github.com/omgwtfnotnow/AlgoView.git
 cd AlgoView
 
