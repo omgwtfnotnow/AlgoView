@@ -35,8 +35,8 @@ export interface SortStep extends ArrayVisualizerStep {
 export interface GraphNode {
   id: string;
   label?: string;
-  x?: number; // For positioning in visualization
-  y?: number; // For positioning in visualization
+  x?: number; // For positioning in visualization & A* heuristic
+  y?: number; // For positioning in visualization & A* heuristic
 }
 
 export interface GraphEdge {
@@ -53,17 +53,19 @@ export interface GraphElementHighlight {
   id: string; // Node or Edge ID
   color: GraphHighlightColor;
   type: 'node' | 'edge';
-  label?: string; // e.g., display distance on node
+  label?: string; // e.g., display distance on node, or f/g/h scores for A*
 }
 
 export interface GraphStep extends VisualizerStep {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  distances?: Record<string, number | typeof Infinity>; // Node ID to distance from start
-  predecessors?: Record<string, string | null>; // Node ID to predecessor Node ID
+  distances?: Record<string, number | typeof Infinity>; // Node ID to distance from start (gScore for A*)
+  predecessors?: Record<string, string | null>; // Node ID to predecessor Node ID (cameFrom for A*)
   currentNodeId?: string; // Current node being processed
   highlights: GraphElementHighlight[];
   targetFoundPath?: string[]; // Array of node IDs forming the path, if target was specified
+  // Optional fields for A* to pass fScores, though often embedded in highlight labels
+  fScores?: Record<string, number | typeof Infinity>; 
 }
 // --- End Graph Algorithm Types ---
 
