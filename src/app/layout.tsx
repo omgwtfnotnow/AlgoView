@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { SidebarProvider } from '@/components/ui/sidebar';
+// import { SidebarProvider } from '@/components/ui/sidebar'; // Removed
 import { SiteHeader } from '@/components/layout/site-header';
-import { MainNav } from '@/components/layout/main-nav';
+// import { MainNav } from '@/components/layout/main-nav'; // Removed
 import { Toaster } from "@/components/ui/toaster";
-import { NetworkIcon } from 'lucide-react';
+// import { NetworkIcon } from 'lucide-react'; // Moved to SiteHeader or not needed if logo handles it
 
 export const metadata: Metadata = {
   title: 'AlgoView',
@@ -24,17 +24,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col">
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex flex-1">
-            <MainNav />
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <SiteHeader />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-                {children}
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        {/* SidebarProvider and MainNav removed */}
+        <SiteHeader />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          {children}
+        </main>
         <Toaster />
       </body>
     </html>
