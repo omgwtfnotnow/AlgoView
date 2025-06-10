@@ -61,11 +61,20 @@ export interface GraphStep extends VisualizerStep {
   edges: GraphEdge[];
   distances?: Record<string, number | typeof Infinity>; // Node ID to distance from start (gScore for A*)
   predecessors?: Record<string, string | null>; // Node ID to predecessor Node ID (cameFrom for A*)
-  currentNodeId?: string; // Current node being processed
+  currentNodeId?: string; // Current node being processed (Dijkstra, Bellman-Ford)
   highlights: GraphElementHighlight[];
   targetFoundPath?: string[]; // Array of node IDs forming the path, if target was specified
-  // Optional fields for A* to pass fScores, though often embedded in highlight labels
+  
+  // A* specific
   fScores?: Record<string, number | typeof Infinity>; 
+  
+  // Floyd-Warshall specific
+  distanceMatrix?: Record<string, Record<string, number | typeof Infinity>>;
+  nextHopMatrix?: Record<string, Record<string, string | null>>; // Stores the next node on the path from source to target
+  currentKNodeId?: string; // The intermediate node k in Floyd-Warshall
+  currentSourceNodeId?: string; // The source node i in Floyd-Warshall
+  currentDestNodeId?: string; // The destination node j in Floyd-Warshall
+  negativeCycleDetected?: boolean; // Flag for Floyd-Warshall and Bellman-Ford
 }
 // --- End Graph Algorithm Types ---
 
@@ -74,7 +83,7 @@ export type AlgorithmType = 'search' | 'sort' | 'graph';
 
 export type SearchAlgorithmKey = 'linear-search' | 'binary-search';
 export type SortAlgorithmKey = 'bubble-sort' | 'merge-sort' | 'quick-sort';
-export type GraphAlgorithmKey = 'dijkstra' | 'bellman-ford' | 'a-star';
+export type GraphAlgorithmKey = 'dijkstra' | 'bellman-ford' | 'a-star' | 'floyd-warshall';
 
 export type AlgorithmKey = SearchAlgorithmKey | SortAlgorithmKey | GraphAlgorithmKey;
 

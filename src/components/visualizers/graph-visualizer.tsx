@@ -13,6 +13,7 @@ import { generateRandomGraph } from '@/lib/algorithms/graph/utils';
 import { dijkstraGenerator } from '@/lib/algorithms/graph/dijkstra';
 import { bellmanFordGenerator } from '@/lib/algorithms/graph/bellman-ford';
 import { aStarGenerator } from '@/lib/algorithms/graph/a-star';
+import { floydWarshallGenerator } from '@/lib/algorithms/graph/floyd-warshall';
 import type { GraphStep, AlgorithmGenerator, GraphAlgorithmKey, VisualizerAlgorithm, GraphNode, GraphEdge } from '@/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -40,9 +41,17 @@ const graphAlgorithms: Record<GraphAlgorithmKey, VisualizerAlgorithm & { generat
     key: 'a-star',
     name: 'A* Search Algorithm',
     description: 'An informed search algorithm that finds the shortest path from a start to a target node using a heuristic to guide its search. Uses Euclidean distance if node x/y coordinates are present.',
-    complexity: { timeWorst: 'O(E) or O(b^d)', spaceWorst: 'O(V+E) or O(b^d)' }, // Highly dependent on heuristic
+    complexity: { timeWorst: 'O(E) or O(b^d)', spaceWorst: 'O(V+E) or O(b^d)' },
     type: 'graph',
     generator: aStarGenerator,
+  },
+  'floyd-warshall': {
+    key: 'floyd-warshall',
+    name: 'Floyd-Warshall Algorithm',
+    description: 'Finds all-pairs shortest paths. Can handle negative edge weights and detect negative cycles.',
+    complexity: { timeWorst: 'O(V^3)', spaceWorst: 'O(V^2)' },
+    type: 'graph',
+    generator: floydWarshallGenerator,
   },
 };
 
@@ -51,7 +60,7 @@ export const GraphVisualizer: React.FC = () => {
   const [selectedAlgorithmKey, setSelectedAlgorithmKey] = useState<GraphAlgorithmKey>('dijkstra');
   const [graph, setGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const [startNodeId, setStartNodeId] = useState<string>('');
-  const [targetNodeId, setTargetNodeId] = useState<string>(''); // Mandatory for A*
+  const [targetNodeId, setTargetNodeId] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<GraphStep | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const [numNodes, setNumNodes] = useState(5);
@@ -63,6 +72,8 @@ export const GraphVisualizer: React.FC = () => {
   const isMountedRef = useRef(false);
 
   const currentAlgorithmDetails = graphAlgorithms[selectedAlgorithmKey];
+  const isFloydWarshallSelected = selectedAlgorithmKey === 'floyd-warshall';
+
 
   const handleGenerateNewGraph = useCallback((nodesCount = numNodes, edgesCount = numEdges, useNegativeWeights = allowNegativeWeights) => {
     if (selectedAlgorithmKey === 'dijkstra' && useNegativeWeights) {
@@ -87,10 +98,14 @@ export const GraphVisualizer: React.FC = () => {
        setCurrentStep({
         nodes: newGraph.nodes,
         edges: newGraph.edges,
-        message: "New graph generated. Verify start/target nodes and press Next Step to begin.",
+        message: "New graph generated. Verify start/target nodes and press Next Step to begin, or configure algorithm parameters.",
         isFinalStep: false,
-        highlights: newGraph.nodes.map(n => ({ id: n.id, type: 'node', color: 'neutral', label: (currentAlgorithmDetails.key !== 'a-star' ? '∞' : `g:∞ h:? f:∞`) }))
+        highlights: newGraph.nodes.map(n => ({ id: n.id, type: 'node', color: 'neutral', label: (currentAlgorithmDetails.key === 'a-star' ? `g:∞ h:? f:∞` : (currentAlgorithmDetails.key === 'floyd-warshall' ? n.label || n.id : '∞')) }))
                       .concat(newGraph.edges.map(e=> ({id: e.id, type: 'edge', color: 'neutral'}))),
+        ...(currentAlgorithmDetails.key === 'floyd-warshall' && { // Initial matrices for Floyd-Warshall display
+            distanceMatrix: Object.fromEntries(newGraph.nodes.map(n1 => [n1.id, Object.fromEntries(newGraph.nodes.map(n2 => [n2.id, n1.id === n2.id ? 0 : Infinity]))])),
+            nextHopMatrix: Object.fromEntries(newGraph.nodes.map(n1 => [n1.id, Object.fromEntries(newGraph.nodes.map(n2 => [n2.id, null]))])),
+        })
       });
     } else {
       setStartNodeId('');
@@ -103,15 +118,16 @@ export const GraphVisualizer: React.FC = () => {
   }, [numNodes, numEdges, allowNegativeWeights, selectedAlgorithmKey, toast, currentAlgorithmDetails.key]);
   
   useEffect(() => {
-    // Initial graph generation on mount
-    handleGenerateNewGraph(numNodes, numEdges, selectedAlgorithmKey === 'bellman-ford' || selectedAlgorithmKey === 'a-star');
+    handleGenerateNewGraph(numNodes, numEdges, selectedAlgorithmKey === 'bellman-ford' || selectedAlgorithmKey === 'a-star' || selectedAlgorithmKey === 'floyd-warshall');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
   useEffect(() => {
-    // Regenerate graph if relevant config changes
     if (isMountedRef.current) {
-      handleGenerateNewGraph(numNodes, numEdges, allowNegativeWeights);
+      let useNegative = allowNegativeWeights;
+      if (selectedAlgorithmKey === 'dijkstra') useNegative = false;
+      else if (selectedAlgorithmKey === 'floyd-warshall' || selectedAlgorithmKey === 'bellman-ford' || selectedAlgorithmKey === 'a-star') useNegative = true; // Default to true if applicable
+      handleGenerateNewGraph(numNodes, numEdges, useNegative);
     } else {
       isMountedRef.current = true;
     }
@@ -123,38 +139,43 @@ export const GraphVisualizer: React.FC = () => {
         toast({ title: "Empty Graph", description: "Please generate a graph first.", variant: "destructive" });
         return false;
     }
-    if (!startNodeId || startNodeId.trim() === '') {
-        toast({ title: "Missing Start Node", description: "Please specify a start node ID.", variant: "destructive" });
-        setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: "Error: Start node ID is required.", isFinalStep: true }));
-        return false;
-    }
-     if (selectedAlgorithmKey === 'a-star' && (!targetNodeId || targetNodeId.trim() === '')) {
-      toast({ title: "Missing Target Node", description: "A* Search requires a target node ID.", variant: "destructive" });
-      setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: "Error: Target node ID is required for A* Search.", isFinalStep: true }));
-      return false;
+
+    if (!isFloydWarshallSelected) { // Floyd-Warshall doesn't use start/target node inputs directly for its core logic
+        if (!startNodeId || startNodeId.trim() === '') {
+            toast({ title: "Missing Start Node", description: "Please specify a start node ID.", variant: "destructive" });
+            setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: "Error: Start node ID is required.", isFinalStep: true }));
+            return false;
+        }
+        if (selectedAlgorithmKey === 'a-star' && (!targetNodeId || targetNodeId.trim() === '')) {
+            toast({ title: "Missing Target Node", description: "A* Search requires a target node ID.", variant: "destructive" });
+            setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: "Error: Target node ID is required for A* Search.", isFinalStep: true }));
+            return false;
+        }
+        if (!graph.nodes.find(n => n.id === startNodeId)) {
+            toast({ title: "Invalid Start Node", description: `Start node "${startNodeId}" does not exist in the graph.`, variant: "destructive" });
+            setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: `Error: Start node "${startNodeId}" does not exist.`, isFinalStep: true }));
+            return false;
+        }
+        if (targetNodeId && targetNodeId.trim() !== '' && !graph.nodes.find(n => n.id === targetNodeId)) {
+            toast({ title: "Invalid Target Node", description: `Target node "${targetNodeId}" does not exist. Leave empty if not searching for a specific target (except for A*).`, variant: "destructive" });
+            setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: `Error: Target node "${targetNodeId}" does not exist.`, isFinalStep: true }));
+            return false;
+        }
     }
 
-    if (!graph.nodes.find(n => n.id === startNodeId)) {
-        toast({ title: "Invalid Start Node", description: `Start node "${startNodeId}" does not exist in the graph.`, variant: "destructive" });
-        setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: `Error: Start node "${startNodeId}" does not exist.`, isFinalStep: true }));
-        return false;
-    }
-    if (targetNodeId && targetNodeId.trim() !== '' && !graph.nodes.find(n => n.id === targetNodeId)) {
-         toast({ title: "Invalid Target Node", description: `Target node "${targetNodeId}" does not exist. Leave empty if not searching for a specific target (except for A*).`, variant: "destructive" });
-         setCurrentStep(prev => ({...(prev || {nodes: graph.nodes, edges: graph.edges, highlights:[]}), message: `Error: Target node "${targetNodeId}" does not exist.`, isFinalStep: true }));
-        return false;
-    }
 
     const generatorFn = graphAlgorithms[selectedAlgorithmKey].generator;
     const actualTargetNodeId = (targetNodeId && targetNodeId.trim() !== '') ? targetNodeId : undefined;
     
-    // A* needs a target, Dijkstra and Bellman-Ford can run without it (finding all paths from source)
-    if (selectedAlgorithmKey === 'a-star' && !actualTargetNodeId) {
-      // This case is already handled by the check above, but as a safeguard:
-      toast({ title: "Target Node Required for A*", description: "Please specify a target node for A* search.", variant: "destructive" });
-      return false;
+    if (isFloydWarshallSelected) {
+        algorithmInstanceRef.current = generatorFn(graph.nodes, graph.edges);
+    } else {
+        if (selectedAlgorithmKey === 'a-star' && !actualTargetNodeId) {
+            toast({ title: "Target Node Required for A*", description: "Please specify a target node for A* search.", variant: "destructive" });
+            return false;
+        }
+        algorithmInstanceRef.current = generatorFn(graph.nodes, graph.edges, startNodeId, actualTargetNodeId);
     }
-    algorithmInstanceRef.current = generatorFn(graph.nodes, graph.edges, startNodeId, actualTargetNodeId);
     
     const firstStepResult = algorithmInstanceRef.current?.next();
     if (firstStepResult && !firstStepResult.done) {
@@ -177,7 +198,7 @@ export const GraphVisualizer: React.FC = () => {
         return false;
     }
     return true;
-  }, [graph, startNodeId, targetNodeId, selectedAlgorithmKey, toast]);
+  }, [graph, startNodeId, targetNodeId, selectedAlgorithmKey, toast, isFloydWarshallSelected]);
 
 
   const resetVisualization = useCallback(() => {
@@ -185,22 +206,21 @@ export const GraphVisualizer: React.FC = () => {
         const reinitialized = initializeAlgorithm();
         if (!reinitialized && selectedAlgorithmKey === 'a-star' && (!targetNodeId || targetNodeId.trim() === '')) {
            // If A* failed to init due to missing target, don't proceed further on reset.
-           // Keep currentStep showing the error.
-        } else if (!reinitialized) {
-           // For other algos or A* with other errors, force a graph regeneration if init failed
+        } else if (!reinitialized && !isFloydWarshallSelected) {
            handleGenerateNewGraph();
+        } else if (!reinitialized && isFloydWarshallSelected) {
+            // For Floyd-Warshall, if init fails (e.g. empty graph somehow), regenerate.
+            handleGenerateNewGraph();
         }
     } else {
         handleGenerateNewGraph(); 
     }
-  }, [initializeAlgorithm, handleGenerateNewGraph, graph.nodes.length, selectedAlgorithmKey, targetNodeId]);
+  }, [initializeAlgorithm, handleGenerateNewGraph, graph.nodes.length, selectedAlgorithmKey, targetNodeId, isFloydWarshallSelected]);
 
   const nextStep = useCallback(() => {
     if (!algorithmInstanceRef.current) {
       const initialized = initializeAlgorithm();
       if (!initialized) return false; 
-      // If initializeAlgorithm() itself leads to a final step (e.g. A* target missing), currentStep is updated.
-      // We check currentStep directly because initializeAlgorithm might set it.
       if (currentStep?.isFinalStep) return false; 
     }
 
@@ -242,12 +262,11 @@ export const GraphVisualizer: React.FC = () => {
               setCurrentStep(null);
               setIsFinished(false);
               algorithmInstanceRef.current = null;
-              if (newKey === 'bellman-ford' || newKey === 'a-star') { // A* can also benefit from negative weights if heuristic is consistent
+              if (newKey === 'bellman-ford' || newKey === 'a-star' || newKey === 'floyd-warshall') {
                 setAllowNegativeWeights(true);
               } else if (newKey === 'dijkstra') {
                 setAllowNegativeWeights(false);
               }
-              // Graph will regenerate via useEffect due to allowNegativeWeights or selectedAlgorithmKey change
             }}
           >
             <SelectTrigger id="graph-algorithm-select" className="mt-1">
@@ -279,34 +298,37 @@ export const GraphVisualizer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
             <div>
                 <Label htmlFor="numNodesSlider">Number of Nodes ({numNodes})</Label>
-                <Slider id="numNodesSlider" min={2} max={20} value={[numNodes]} onValueChange={(val) => setNumNodes(val[0])} className="mt-1"/>
+                <Slider id="numNodesSlider" min={2} max={isFloydWarshallSelected ? 8 : 20} value={[numNodes]} onValueChange={(val) => setNumNodes(val[0])} className="mt-1"/>
+                 {isFloydWarshallSelected && <p className="text-xs text-muted-foreground mt-1">Max 8 nodes for Floyd-Warshall due to V<sup>3</sup> complexity and matrix display.</p>}
             </div>
             <div>
                 <Label htmlFor="numEdgesSlider">Number of Edges ({numEdges})</Label>
-                <Slider id="numEdgesSlider" min={1} max={Math.min(50, numNodes * (numNodes -1) / 2 )} value={[numEdges]} onValueChange={(val) => setNumEdges(val[0])} className="mt-1"/>
+                <Slider id="numEdgesSlider" min={1} max={Math.min(50, numNodes * (numNodes -1) / (currentAlgorithmDetails.generator === dijkstraGenerator || currentAlgorithmDetails.generator === bellmanFordGenerator || currentAlgorithmDetails.generator === aStarGenerator ? 2 : 1) )} value={[numEdges]} onValueChange={(val) => setNumEdges(val[0])} className="mt-1"/>
             </div>
         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-            <div>
-                <Label htmlFor="startNode">Start Node ID</Label>
-                <Input id="startNode" type="text" value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} placeholder="e.g., n0" className="mt-1"/>
+         {!isFloydWarshallSelected && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div>
+                    <Label htmlFor="startNode">Start Node ID</Label>
+                    <Input id="startNode" type="text" value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} placeholder="e.g., n0" className="mt-1"/>
+                </div>
+                <div>
+                    <Label htmlFor="targetNode">
+                    Target Node ID {selectedAlgorithmKey === 'a-star' && <span className="text-destructive">*</span>}
+                    <span className="text-xs text-muted-foreground ml-1">({selectedAlgorithmKey === 'a-star' ? 'Required for A*' : 'Optional'})</span>
+                    </Label>
+                    <Input 
+                    id="targetNode" 
+                    type="text" 
+                    value={targetNodeId} 
+                    onChange={(e) => setTargetNodeId(e.target.value)} 
+                    placeholder="e.g., n4" 
+                    className="mt-1"
+                    required={selectedAlgorithmKey === 'a-star'} 
+                    />
+                </div>
             </div>
-            <div>
-                <Label htmlFor="targetNode">
-                  Target Node ID {selectedAlgorithmKey === 'a-star' && <span className="text-destructive">*</span>}
-                  <span className="text-xs text-muted-foreground ml-1">({selectedAlgorithmKey === 'a-star' ? 'Required for A*' : 'Optional'})</span>
-                </Label>
-                <Input 
-                  id="targetNode" 
-                  type="text" 
-                  value={targetNodeId} 
-                  onChange={(e) => setTargetNodeId(e.target.value)} 
-                  placeholder="e.g., n4" 
-                  className="mt-1"
-                  required={selectedAlgorithmKey === 'a-star'} 
-                />
-            </div>
-        </div>
+         )}
         <div className="flex items-center space-x-2">
             <Checkbox 
                 id="negativeWeights" 
@@ -320,7 +342,7 @@ export const GraphVisualizer: React.FC = () => {
                 }}
                 disabled={selectedAlgorithmKey === 'dijkstra'}
             />
-            <Label htmlFor="negativeWeights" className="text-sm font-medium">Allow Negative Edge Weights (for Bellman-Ford / A*)</Label>
+            <Label htmlFor="negativeWeights" className="text-sm font-medium">Allow Negative Edge Weights (for Bellman-Ford, A*, Floyd-Warshall)</Label>
         </div>
         <Button onClick={() => handleGenerateNewGraph(numNodes, numEdges, allowNegativeWeights)} variant="outline">
           <Shuffle className="mr-2 h-4 w-4" /> Regenerate Graph Manually
@@ -336,12 +358,12 @@ export const GraphVisualizer: React.FC = () => {
         </Button>
       </div>
 
-      <GraphDisplay step={currentStep} />
+      <GraphDisplay step={currentStep} algorithmKey={selectedAlgorithmKey} />
 
       {currentStep && (
         <Card className={cn(
             "transition-all shadow-md",
-            currentStep.isFinalStep && currentStep.message.toLowerCase().includes("negative-weight cycle detected") ? "border-destructive bg-destructive/10" :
+            currentStep.negativeCycleDetected ? "border-destructive bg-destructive/10" :
             currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 ? "border-accent bg-accent/10" :
             currentStep.isFinalStep && (currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("failed to find a path")) ? "border-destructive bg-destructive/10" :
             currentStep.isFinalStep && currentStep.message.toLowerCase().includes("error") ? "border-destructive bg-destructive/10" :
@@ -350,9 +372,10 @@ export const GraphVisualizer: React.FC = () => {
         )}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-4">
                 <CardTitle className="text-sm font-medium">Status</CardTitle>
-                 {currentStep.isFinalStep && (currentStep.message.toLowerCase().includes("negative-weight cycle detected") || currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("failed to find a path") || currentStep.message.toLowerCase().includes("error")) && <AlertCircle className="h-5 w-5 text-destructive" />}
-                {currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 && !(currentStep.message.toLowerCase().includes("negative-weight cycle detected") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-accent" />}
-                {currentStep.isFinalStep && (!currentStep.targetFoundPath || currentStep.targetFoundPath.length === 0) && !(currentStep.message.toLowerCase().includes("negative-weight cycle detected") || currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("failed to find a path") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                 {currentStep.negativeCycleDetected && <AlertCircle className="h-5 w-5 text-destructive" />}
+                 {!currentStep.negativeCycleDetected && currentStep.isFinalStep && (currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("failed to find a path") || currentStep.message.toLowerCase().includes("error")) && <AlertCircle className="h-5 w-5 text-destructive" />}
+                {!currentStep.negativeCycleDetected && currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 && !(currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-accent" />}
+                {!currentStep.negativeCycleDetected && currentStep.isFinalStep && (!currentStep.targetFoundPath || currentStep.targetFoundPath.length === 0) && !(currentStep.message.toLowerCase().includes("negative-weight cycle detected") || currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("failed to find a path") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-primary" />}
 
             </CardHeader>
             <CardContent className="px-4 pb-3">
@@ -363,5 +386,3 @@ export const GraphVisualizer: React.FC = () => {
     </div>
   );
 };
-
-    
