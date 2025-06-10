@@ -11,7 +11,7 @@ import { bubbleSortGenerator } from '@/lib/algorithms/sort/bubble-sort';
 import { mergeSortGenerator } from '@/lib/algorithms/sort/merge-sort';
 import { quickSortGenerator } from '@/lib/algorithms/sort/quick-sort';
 import type { SortStep, AlgorithmGenerator, SortAlgorithmKey, Algorithm } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,14 +46,11 @@ export const SortVisualizer: React.FC = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<SortAlgorithmKey>('bubble-sort');
   const [array, setArray] = useState<number[]>(generateRandomArray(10,100));
   const [currentStep, setCurrentStep] = useState<SortStep | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(200); // ms delay
   const [dataSize, setDataSize] = useState(10);
   const [maxArrayValue, setMaxArrayValue] = useState(100);
   const [isFinished, setIsFinished] = useState(false);
 
   const algorithmInstanceRef = useRef<AlgorithmGenerator | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentAlgorithmDetails = sortAlgorithms[selectedAlgorithm];
 
@@ -65,32 +62,43 @@ export const SortVisualizer: React.FC = () => {
   }, [array, selectedAlgorithm, setCurrentStep, setIsFinished]);
 
   const resetVisualization = useCallback(() => {
-    setIsPlaying(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     initializeAlgorithm();
   }, [initializeAlgorithm]);
 
   const generateNewArray = useCallback(() => {
     const newArray = generateRandomArray(dataSize, maxArrayValue);
     setArray(newArray);
-    setIsPlaying(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setCurrentStep({
         array: newArray,
-        message: "New array generated. Press Play or Next Step to start.",
-        isFinalStep: false, 
+        message: "New array generated. Press Next Step to start.",
+        isFinalStep: false,
         highlights: newArray.map((_, i) => ({ index: i, color: 'neutral' })),
     });
     setIsFinished(false);
-    algorithmInstanceRef.current = null; 
+    algorithmInstanceRef.current = null;
   }, [dataSize, maxArrayValue]);
 
   useEffect(() => {
-    generateNewArray(); 
-  }, []); 
+    generateNewArray();
+  }, []);
 
 
   const nextStep = useCallback(() => {
+    if (!algorithmInstanceRef.current) {
+        initializeAlgorithm();
+        // If initializeAlgorithm directly leads to a final step (e.g. empty array), reflect this.
+        if (algorithmInstanceRef.current) {
+            const initialStep = algorithmInstanceRef.current.next().value as SortStep;
+             if (initialStep && initialStep.isFinalStep) {
+                setCurrentStep(initialStep);
+                setIsFinished(true);
+                return false;
+             }
+        } else {
+             return false; // Should not happen if initializeAlgorithm works
+        }
+    }
+    
     if (algorithmInstanceRef.current) {
       const next = algorithmInstanceRef.current.next();
       if (!next.done) {
@@ -101,52 +109,21 @@ export const SortVisualizer: React.FC = () => {
       } else {
         const finalStepData = next.value as SortStep | undefined;
         if(finalStepData) setCurrentStep(finalStepData);
-        setIsPlaying(false);
         setIsFinished(true);
         return false;
       }
     }
     return false;
-  }, [setCurrentStep, setIsFinished, setIsPlaying]);
+  }, [initializeAlgorithm, setCurrentStep, setIsFinished]);
 
-  useEffect(() => {
-    if (isPlaying && !isFinished) {
-      timeoutRef.current = setTimeout(() => {
-        const advanced = nextStep();
-        if (!advanced) {
-          setIsPlaying(false);
-        }
-      }, speed);
-    } else {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    }
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [isPlaying, speed, nextStep, isFinished]);
-
-
-  const handlePlayPause = () => {
-    if (isFinished) {
-      resetVisualization();
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(!isPlaying);
-    }
-    if (!algorithmInstanceRef.current) { 
-        initializeAlgorithm();
-    }
-  };
-  
   const handleDataSizeChange = (size: number) => {
     setDataSize(size);
     const newArray = generateRandomArray(size, maxArrayValue);
     setArray(newArray);
-    setIsPlaying(false);
     setCurrentStep({
         array: newArray,
-        message: "Adjusted data size. Press Play or Next Step.",
-        isFinalStep: false, 
+        message: "Adjusted data size. Press Next Step.",
+        isFinalStep: false,
         highlights: newArray.map((_, i) => ({ index: i, color: 'neutral' })),
       });
     setIsFinished(false);
@@ -162,12 +139,10 @@ export const SortVisualizer: React.FC = () => {
             value={selectedAlgorithm}
             onValueChange={(value) => {
               setSelectedAlgorithm(value as SortAlgorithmKey);
-              setIsPlaying(false);
               setCurrentStep(null);
               setIsFinished(false);
               algorithmInstanceRef.current = null;
             }}
-            disabled={isPlaying}
           >
             <SelectTrigger id="sort-algorithm-select" className="mt-1">
               <SelectValue placeholder="Select algorithm" />
@@ -193,16 +168,9 @@ export const SortVisualizer: React.FC = () => {
       </div>
 
       <SimulationControls
-        isPlaying={isPlaying}
-        speed={speed}
         dataSize={dataSize}
-        onPlayPause={handlePlayPause}
-        onNextStep={() => {
-            if (!algorithmInstanceRef.current) initializeAlgorithm();
-            nextStep();
-        }}
+        onNextStep={nextStep}
         onReset={resetVisualization}
-        onSpeedChange={setSpeed}
         onDataSizeChange={handleDataSizeChange}
         onGenerateNewArray={generateNewArray}
         algorithmType="sort"

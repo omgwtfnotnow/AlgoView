@@ -10,7 +10,7 @@ import { generateRandomArray } from '@/lib/algorithms/utils';
 import { linearSearchGenerator } from '@/lib/algorithms/search/linear-search';
 import { binarySearchGenerator } from '@/lib/algorithms/search/binary-search';
 import type { SearchStep, AlgorithmGenerator, SearchAlgorithmKey, Algorithm } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -39,14 +39,11 @@ export const SearchVisualizer: React.FC = () => {
   const [array, setArray] = useState<number[]>(generateRandomArray(10, 100));
   const [target, setTarget] = useState<number | undefined>(undefined);
   const [currentStep, setCurrentStep] = useState<SearchStep | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(200); // ms delay
   const [dataSize, setDataSize] = useState(10);
   const [maxArrayValue, setMaxArrayValue] = useState(100);
   const [isFinished, setIsFinished] = useState(false);
 
   const algorithmInstanceRef = useRef<AlgorithmGenerator | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   const currentAlgorithmDetails = searchAlgorithms[selectedAlgorithm];
@@ -65,11 +62,11 @@ export const SearchVisualizer: React.FC = () => {
 
     let arrayToSearch = [...array];
     if (selectedAlgorithm === 'binary-search') {
-      arrayToSearch.sort((a, b) => a - b); 
-      setArray(arrayToSearch); 
+      arrayToSearch.sort((a, b) => a - b);
+      setArray(arrayToSearch);
        toast({ title: "Array Sorted", description: "Binary Search requires a sorted array. The array has been sorted for you." });
     }
-    
+
     algorithmInstanceRef.current = searchAlgorithms[selectedAlgorithm].generator(arrayToSearch, target);
     const firstStep = algorithmInstanceRef.current.next().value as SearchStep;
     setCurrentStep(firstStep);
@@ -77,89 +74,81 @@ export const SearchVisualizer: React.FC = () => {
   }, [array, target, selectedAlgorithm, toast, setCurrentStep, setIsFinished]);
 
   const resetVisualization = useCallback(() => {
-    setIsPlaying(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     initializeAlgorithm();
   }, [initializeAlgorithm]);
 
   const generateNewArray = useCallback(() => {
     const newArray = generateRandomArray(dataSize, maxArrayValue);
     setArray(newArray);
-    setIsPlaying(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setCurrentStep({
         array: newArray,
         message: "New array generated. Set a target and start the algorithm.",
-        isFinalStep: false, 
+        isFinalStep: false,
         highlights: newArray.map((_, i) => ({ index: i, color: 'neutral' })),
       });
     setIsFinished(false);
-    algorithmInstanceRef.current = null; 
+    algorithmInstanceRef.current = null;
   }, [dataSize, maxArrayValue]);
-  
+
 
   useEffect(() => {
-    generateNewArray(); 
-  }, []); 
+    generateNewArray();
+  }, []);
 
 
   const nextStep = useCallback(() => {
+    if (!algorithmInstanceRef.current) {
+        if (target !== undefined) {
+            initializeAlgorithm();
+            // After initializing, if it's already the final step, don't proceed further.
+            // This handles cases where target is immediately found/not found or array is empty.
+             if (algorithmInstanceRef.current) {
+                const initialStep = algorithmInstanceRef.current.next().value as SearchStep;
+                 if (initialStep && initialStep.isFinalStep) {
+                    setCurrentStep(initialStep);
+                    setIsFinished(true);
+                    return false;
+                 }
+             } else { // if target was undefined, initializeAlgorithm sets a message and finishes.
+                return false;
+             }
+        } else {
+             setCurrentStep({
+                array: [...array],
+                message: "Please enter a target value to search for.",
+                isFinalStep: true,
+                highlights: array.map((_, i) => ({ index: i, color: 'neutral' })),
+            });
+            setIsFinished(true);
+            return false;
+        }
+    }
+
     if (algorithmInstanceRef.current) {
       const next = algorithmInstanceRef.current.next();
       if (!next.done) {
         const stepData = next.value as SearchStep;
         setCurrentStep(stepData);
         setIsFinished(stepData.isFinalStep);
-        return true; 
+        return true;
       } else {
-        const finalStepData = next.value as SearchStep | undefined; 
+        const finalStepData = next.value as SearchStep | undefined;
         if(finalStepData) setCurrentStep(finalStepData);
-        setIsPlaying(false);
         setIsFinished(true);
-        return false; 
+        return false;
       }
     }
-    return false; 
-  }, [setCurrentStep, setIsFinished, setIsPlaying]);
-
-  useEffect(() => {
-    if (isPlaying && !isFinished) {
-      timeoutRef.current = setTimeout(() => {
-        const advanced = nextStep();
-        if (!advanced) {
-          setIsPlaying(false); 
-        }
-      }, speed);
-    } else {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    }
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [isPlaying, speed, nextStep, isFinished]);
-
-
-  const handlePlayPause = () => {
-    if (isFinished) { 
-      resetVisualization();
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(!isPlaying);
-    }
-    if (!algorithmInstanceRef.current && target !== undefined) { 
-        initializeAlgorithm();
-    }
-  };
+    return false;
+  }, [initializeAlgorithm, target, array, setCurrentStep, setIsFinished]);
   
   const handleDataSizeChange = (size: number) => {
     setDataSize(size);
     const newArray = generateRandomArray(size, maxArrayValue);
     setArray(newArray);
-    setIsPlaying(false);
     setCurrentStep({
         array: newArray,
         message: "Adjusted data size. Set a target and start the algorithm.",
-        isFinalStep: false, 
+        isFinalStep: false,
         highlights: newArray.map((_, i) => ({ index: i, color: 'neutral' })),
       });
     setIsFinished(false);
@@ -176,12 +165,10 @@ export const SearchVisualizer: React.FC = () => {
             value={selectedAlgorithm}
             onValueChange={(value) => {
               setSelectedAlgorithm(value as SearchAlgorithmKey);
-              setIsPlaying(false);
-              setCurrentStep(null); 
+              setCurrentStep(null);
               setIsFinished(false);
-              algorithmInstanceRef.current = null; 
+              algorithmInstanceRef.current = null;
             }}
-            disabled={isPlaying}
           >
             <SelectTrigger id="search-algorithm-select" className="mt-1">
               <SelectValue placeholder="Select algorithm" />
@@ -207,24 +194,16 @@ export const SearchVisualizer: React.FC = () => {
       </div>
 
       <SimulationControls
-        isPlaying={isPlaying}
-        speed={speed}
         dataSize={dataSize}
-        onPlayPause={handlePlayPause}
-        onNextStep={() => {
-            if (!algorithmInstanceRef.current && target !== undefined) initializeAlgorithm();
-            nextStep();
-        }}
+        onNextStep={nextStep}
         onReset={resetVisualization}
-        onSpeedChange={setSpeed}
         onDataSizeChange={handleDataSizeChange}
         onGenerateNewArray={generateNewArray}
         algorithmType="search"
         targetValue={target}
         onTargetValueChange={(val) => {
             setTarget(isNaN(val) ? undefined : val);
-            setIsPlaying(false);
-            setCurrentStep(null); 
+            setCurrentStep(null);
             setIsFinished(false);
             algorithmInstanceRef.current = null;
         }}
@@ -236,7 +215,7 @@ export const SearchVisualizer: React.FC = () => {
       {currentStep && (
         <Card className={cn(
             "transition-all",
-            currentStep.isFinalStep && currentStep.targetFoundAtIndex !== undefined ? "border-accent bg-accent/10" : 
+            currentStep.isFinalStep && currentStep.targetFoundAtIndex !== undefined ? "border-accent bg-accent/10" :
             currentStep.isFinalStep && currentStep.targetFoundAtIndex === undefined ? "border-destructive bg-destructive/10" :
             "bg-card"
         )}>
