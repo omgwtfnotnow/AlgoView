@@ -11,10 +11,12 @@ import { AlertCircle, CheckCircle2, RotateCcw, SkipForward, Shuffle } from 'luci
 import { GraphDisplay } from './graph-display';
 import { generateRandomGraph } from '@/lib/algorithms/graph/utils';
 import { dijkstraGenerator } from '@/lib/algorithms/graph/dijkstra';
+import { bellmanFordGenerator } from '@/lib/algorithms/graph/bellman-ford';
 import type { GraphStep, AlgorithmGenerator, GraphAlgorithmKey, VisualizerAlgorithm, GraphNode, GraphEdge } from '@/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const graphAlgorithms: Record<GraphAlgorithmKey, VisualizerAlgorithm & { generator: (...args: any[]) => AlgorithmGenerator }> = {
   'dijkstra': {
@@ -31,19 +33,17 @@ const graphAlgorithms: Record<GraphAlgorithmKey, VisualizerAlgorithm & { generat
     description: 'Finds the shortest paths from a single source node, allowing for negative edge weights. Can detect negative cycles.',
     complexity: { timeWorst: 'O(VE)', spaceWorst: 'O(V)' },
     type: 'graph',
-    generator: function*(nodes: GraphNode[], edges: GraphEdge[]) { 
-      yield { nodes, edges, message: 'Bellman-Ford not yet implemented.', isFinalStep: true, highlights: [] };
-    } as any,
+    generator: bellmanFordGenerator,
   },
   'a-star': {
     key: 'a-star',
     name: 'A* Search Algorithm',
     description: 'An informed search algorithm that finds the shortest path using a heuristic to guide its search.',
-    complexity: { timeWorst: 'O(E) or O(b^d)', spaceWorst: 'O(V+E) or O(b^d)' }, // Highly dependent on heuristic
+    complexity: { timeWorst: 'O(E) or O(b^d)', spaceWorst: 'O(V+E) or O(b^d)' },
     type: 'graph',
     generator: function*(nodes: GraphNode[], edges: GraphEdge[]) { 
       yield { nodes, edges, message: 'A* Search not yet implemented.', isFinalStep: true, highlights: [] };
-    } as any,
+    } as any, // Cast to satisfy type, will be replaced
   },
 };
 
@@ -57,15 +57,21 @@ export const GraphVisualizer: React.FC = () => {
   const [isFinished, setIsFinished] = useState(false);
   const [numNodes, setNumNodes] = useState(5);
   const [numEdges, setNumEdges] = useState(7);
+  const [allowNegativeWeights, setAllowNegativeWeights] = useState(false);
 
   const algorithmInstanceRef = useRef<AlgorithmGenerator | null>(null);
   const { toast } = useToast();
-  const isMountedRef = useRef(false); // To track if component has mounted for auto-regeneration
+  const isMountedRef = useRef(false);
 
   const currentAlgorithmDetails = graphAlgorithms[selectedAlgorithmKey];
 
-  const handleGenerateNewGraph = useCallback((nodesCount = numNodes, edgesCount = numEdges) => {
-    const newGraph = generateRandomGraph(nodesCount, edgesCount, 10, false); // Undirected for now
+  const handleGenerateNewGraph = useCallback((nodesCount = numNodes, edgesCount = numEdges, useNegativeWeights = allowNegativeWeights) => {
+    if (selectedAlgorithmKey === 'dijkstra' && useNegativeWeights) {
+        toast({title: "Warning", description: "Dijkstra's algorithm may not work correctly with negative edge weights. Disabling negative weights for Dijkstra.", variant: "default"});
+        setAllowNegativeWeights(false); // Auto-disable for Dijkstra
+        useNegativeWeights = false; // Use corrected value for this generation
+    }
+    const newGraph = generateRandomGraph(nodesCount, edgesCount, 10, false, useNegativeWeights, useNegativeWeights ? -5 : 1);
     setGraph(newGraph);
     setCurrentStep(null);
     setIsFinished(false);
@@ -84,7 +90,7 @@ export const GraphVisualizer: React.FC = () => {
         edges: newGraph.edges,
         message: "New graph generated. Verify start/target nodes and press Next Step to begin.",
         isFinalStep: false,
-        highlights: newGraph.nodes.map(n => ({ id: n.id, type: 'node', color: 'neutral', label: '?' }))
+        highlights: newGraph.nodes.map(n => ({ id: n.id, type: 'node', color: 'neutral', label: (selectedAlgorithmKey === 'dijkstra' || selectedAlgorithmKey === 'bellman-ford') ? '∞' : '?' }))
                       .concat(newGraph.edges.map(e=> ({id: e.id, type: 'edge', color: 'neutral'}))),
       });
     } else {
@@ -95,25 +101,20 @@ export const GraphVisualizer: React.FC = () => {
         isFinalStep: true, highlights: []
       });
     }
-  }, [numNodes, numEdges]);
+  }, [numNodes, numEdges, allowNegativeWeights, selectedAlgorithmKey, toast]);
   
-  // Effect for initial graph generation
   useEffect(() => {
-    handleGenerateNewGraph(5,7); // Default initial values
+    handleGenerateNewGraph(5,7, selectedAlgorithmKey === 'bellman-ford');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only on mount to generate initial graph
+  }, []); 
 
-  // Effect for regenerating graph when numNodes or numEdges change by the user
   useEffect(() => {
     if (isMountedRef.current) {
-      // handleGenerateNewGraph uses current numNodes, numEdges from state
-      handleGenerateNewGraph();
+      handleGenerateNewGraph(numNodes, numEdges, allowNegativeWeights);
     } else {
       isMountedRef.current = true;
     }
-  // handleGenerateNewGraph is already memoized with numNodes, numEdges in its deps
-  // Adding numNodes and numEdges here explicitly triggers this effect when they change.
-  }, [numNodes, numEdges, handleGenerateNewGraph]);
+  }, [numNodes, numEdges, allowNegativeWeights, handleGenerateNewGraph]);
 
 
   const initializeAlgorithm = useCallback(() => {
@@ -157,14 +158,14 @@ export const GraphVisualizer: React.FC = () => {
         if (step?.isFinalStep && step.message.toLowerCase().includes("error")) {
             toast({ title: "Algorithm Initialization Error", description: step.message, variant: "destructive" });
         }
-    } else if (firstStepResult?.done && firstStepResult.value) { // Generator finished on first step (e.g. error)
+    } else if (firstStepResult?.done && firstStepResult.value) {
         const step = firstStepResult.value as GraphStep;
         setCurrentStep(step);
         setIsFinished(true);
          if (step.message.toLowerCase().includes("error")) {
             toast({ title: "Algorithm Initialization Error", description: step.message, variant: "destructive" });
         }
-    } else if (!firstStepResult) { // Should not happen if generator is valid
+    } else if (!firstStepResult) { 
         toast({ title: "Algorithm Error", description: "Failed to start algorithm generator.", variant: "destructive" });
         setIsFinished(true);
         return false;
@@ -185,33 +186,33 @@ export const GraphVisualizer: React.FC = () => {
     if (!algorithmInstanceRef.current) {
       const initialized = initializeAlgorithm();
       if (!initialized) return false; 
-      if (currentStep?.isFinalStep) return false;
+      if (currentStep?.isFinalStep) return false; // If initialize leads to final step immediately
     }
 
-    if (algorithmInstanceRef.current) {
-      const next = algorithmInstanceRef.current.next();
-      if (!next.done) {
-        const stepData = next.value as GraphStep;
-        setCurrentStep(stepData);
-        setIsFinished(stepData.isFinalStep);
-        if (stepData.isFinalStep && stepData.message.toLowerCase().includes("error")) {
-            toast({ title: "Algorithm Error", description: stepData.message, variant: "destructive" });
-        }
-        return true;
-      } else { 
-        const finalStepData = next.value as GraphStep | undefined; 
-        if (finalStepData) {
-             setCurrentStep(finalStepData);
-             if (finalStepData.message.toLowerCase().includes("error")) {
-                toast({ title: "Algorithm Error", description: finalStepData.message, variant: "destructive" });
-            }
-        }
-        setIsFinished(true);
-        return false;
+    // If after initialization, we are already finished (e.g., error step from generator), don't proceed.
+    if (isFinished || !algorithmInstanceRef.current) return false;
+
+    const next = algorithmInstanceRef.current.next();
+    if (!next.done) {
+      const stepData = next.value as GraphStep;
+      setCurrentStep(stepData);
+      setIsFinished(stepData.isFinalStep);
+      if (stepData.isFinalStep && stepData.message.toLowerCase().includes("error")) {
+          toast({ title: "Algorithm Error", description: stepData.message, variant: "destructive" });
       }
+      return true;
+    } else { 
+      const finalStepData = next.value as GraphStep | undefined; 
+      if (finalStepData) {
+           setCurrentStep(finalStepData);
+           if (finalStepData.message.toLowerCase().includes("error")) {
+              toast({ title: "Algorithm Error", description: finalStepData.message, variant: "destructive" });
+          }
+      }
+      setIsFinished(true);
+      return false;
     }
-    return false;
-  }, [initializeAlgorithm, toast, currentStep?.isFinalStep]);
+  }, [initializeAlgorithm, toast, currentStep?.isFinalStep, isFinished]);
 
 
   return (
@@ -222,10 +223,18 @@ export const GraphVisualizer: React.FC = () => {
           <Select
             value={selectedAlgorithmKey}
             onValueChange={(value) => {
-              setSelectedAlgorithmKey(value as GraphAlgorithmKey);
+              const newKey = value as GraphAlgorithmKey;
+              setSelectedAlgorithmKey(newKey);
               setCurrentStep(null);
               setIsFinished(false);
               algorithmInstanceRef.current = null;
+              // Automatically enable negative weights for Bellman-Ford, disable for Dijkstra
+              if (newKey === 'bellman-ford') {
+                setAllowNegativeWeights(true);
+              } else if (newKey === 'dijkstra') {
+                setAllowNegativeWeights(false);
+              }
+              // Graph will regenerate due to allowNegativeWeights or selectedAlgorithmKey change via useEffect
             }}
           >
             <SelectTrigger id="graph-algorithm-select" className="mt-1">
@@ -233,8 +242,8 @@ export const GraphVisualizer: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               {Object.values(graphAlgorithms).map((algo) => (
-                <SelectItem key={algo.key} value={algo.key} disabled={algo.key !== 'dijkstra'}>
-                  {algo.name} {algo.key !== 'dijkstra' ? '(Not Implemented)' : ''}
+                <SelectItem key={algo.key} value={algo.key} disabled={algo.key === 'a-star'}>
+                  {algo.name} {algo.key === 'a-star' ? '(Not Implemented)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -254,7 +263,7 @@ export const GraphVisualizer: React.FC = () => {
 
       <Card className="p-4 space-y-4 shadow">
         <CardTitle className="text-xl">Graph Configuration</CardTitle>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
             <div>
                 <Label htmlFor="numNodesSlider">Number of Nodes ({numNodes})</Label>
                 <Slider id="numNodesSlider" min={2} max={20} value={[numNodes]} onValueChange={(val) => setNumNodes(val[0])} className="mt-1"/>
@@ -264,26 +273,41 @@ export const GraphVisualizer: React.FC = () => {
                 <Slider id="numEdgesSlider" min={1} max={Math.min(50, numNodes * (numNodes -1) / 2 )} value={[numEdges]} onValueChange={(val) => setNumEdges(val[0])} className="mt-1"/>
             </div>
         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
             <div>
                 <Label htmlFor="startNode">Start Node ID</Label>
                 <Input id="startNode" type="text" value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} placeholder="e.g., n0" className="mt-1"/>
             </div>
             <div>
-                <Label htmlFor="targetNode">Target Node ID (Optional for Dijkstra)</Label>
+                <Label htmlFor="targetNode">Target Node ID (Optional)</Label>
                 <Input id="targetNode" type="text" value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} placeholder="e.g., n4" className="mt-1"/>
             </div>
         </div>
-        <Button onClick={() => handleGenerateNewGraph()} variant="outline">
-          <Shuffle className="mr-2 h-4 w-4" /> Generate New Random Graph Manually
+        <div className="flex items-center space-x-2">
+            <Checkbox 
+                id="negativeWeights" 
+                checked={allowNegativeWeights} 
+                onCheckedChange={(checked) => {
+                    if (selectedAlgorithmKey === 'dijkstra' && checked) {
+                        toast({title: "Warning", description: "Dijkstra's does not support negative weights. Keeping them disabled.", variant: "default"});
+                        return;
+                    }
+                    setAllowNegativeWeights(checked as boolean);
+                }}
+                disabled={selectedAlgorithmKey === 'dijkstra'}
+            />
+            <Label htmlFor="negativeWeights" className="text-sm font-medium">Allow Negative Edge Weights (for Bellman-Ford)</Label>
+        </div>
+        <Button onClick={() => handleGenerateNewGraph(numNodes, numEdges, allowNegativeWeights)} variant="outline">
+          <Shuffle className="mr-2 h-4 w-4" /> Regenerate Graph Manually
         </Button>
       </Card>
       
        <div className="flex flex-wrap gap-2 justify-center p-4 border rounded-lg bg-card shadow-sm">
-        <Button onClick={nextStep} disabled={isFinished || selectedAlgorithmKey !== 'dijkstra'} variant="outline">
+        <Button onClick={nextStep} disabled={isFinished || selectedAlgorithmKey === 'a-star'} variant="outline">
           <SkipForward className="mr-2 h-4 w-4" /> Next Step
         </Button>
-        <Button onClick={resetVisualization} variant="destructive" disabled={selectedAlgorithmKey !== 'dijkstra'}>
+        <Button onClick={resetVisualization} variant="destructive" disabled={selectedAlgorithmKey === 'a-star'}>
           <RotateCcw className="mr-2 h-4 w-4" /> Reset Algorithm
         </Button>
       </div>
@@ -293,6 +317,7 @@ export const GraphVisualizer: React.FC = () => {
       {currentStep && (
         <Card className={cn(
             "transition-all shadow-md",
+            currentStep.isFinalStep && currentStep.message.toLowerCase().includes("negative-weight cycle detected") ? "border-destructive bg-destructive/10" :
             currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 ? "border-accent bg-accent/10" :
             currentStep.isFinalStep && currentStep.message.toLowerCase().includes("not reachable") ? "border-destructive bg-destructive/10" :
             currentStep.isFinalStep && currentStep.message.toLowerCase().includes("error") ? "border-destructive bg-destructive/10" :
@@ -301,9 +326,10 @@ export const GraphVisualizer: React.FC = () => {
         )}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-4">
                 <CardTitle className="text-sm font-medium">Status</CardTitle>
-                {currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 && <CheckCircle2 className="h-5 w-5 text-accent" />}
-                {currentStep.isFinalStep && (currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <AlertCircle className="h-5 w-5 text-destructive" />}
-                {currentStep.isFinalStep && (!currentStep.targetFoundPath || currentStep.targetFoundPath.length === 0) && !(currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                 {currentStep.isFinalStep && (currentStep.message.toLowerCase().includes("negative-weight cycle detected") || currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <AlertCircle className="h-5 w-5 text-destructive" />}
+                {currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 && !currentStep.message.toLowerCase().includes("negative-weight cycle detected") && <CheckCircle2 className="h-5 w-5 text-accent" />}
+                {currentStep.isFinalStep && (!currentStep.targetFoundPath || currentStep.targetFoundPath.length === 0) && !(currentStep.message.toLowerCase().includes("negative-weight cycle detected") || currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-primary" />}
+
             </CardHeader>
             <CardContent className="px-4 pb-3">
                 <p className="text-sm text-muted-foreground min-h-[20px] whitespace-pre-wrap">{currentStep.message || "Algorithm initialized. Press Next Step."}</p>
@@ -313,3 +339,5 @@ export const GraphVisualizer: React.FC = () => {
     </div>
   );
 };
+
+    
