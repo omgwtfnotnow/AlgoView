@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -43,7 +44,7 @@ const sortAlgorithms: Record<SortAlgorithmKey, Algorithm & { generator: (arr: nu
 
 export const SortVisualizer: React.FC = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<SortAlgorithmKey>('bubble-sort');
-  const [array, setArray] = useState<number[]>(generateRandomArray(10));
+  const [array, setArray] = useState<number[]>(generateRandomArray(10,100));
   const [currentStep, setCurrentStep] = useState<SortStep | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(200); // ms delay
@@ -61,7 +62,7 @@ export const SortVisualizer: React.FC = () => {
     const firstStep = algorithmInstanceRef.current.next().value as SortStep;
     setCurrentStep(firstStep);
     setIsFinished(firstStep?.isFinalStep || false);
-  }, [array, selectedAlgorithm]);
+  }, [array, selectedAlgorithm, setCurrentStep, setIsFinished]);
 
   const resetVisualization = useCallback(() => {
     setIsPlaying(false);
@@ -85,8 +86,8 @@ export const SortVisualizer: React.FC = () => {
   }, [dataSize, maxArrayValue]);
 
   useEffect(() => {
-    generateNewArray(); // Generate initial array
-  }, []); // Empty dependency to run only once on mount
+    generateNewArray(); 
+  }, []); 
 
 
   const nextStep = useCallback(() => {
@@ -106,12 +107,13 @@ export const SortVisualizer: React.FC = () => {
       }
     }
     return false;
-  }, []);
+  }, [setCurrentStep, setIsFinished, setIsPlaying]);
 
   useEffect(() => {
     if (isPlaying && !isFinished) {
       timeoutRef.current = setTimeout(() => {
-        if(!nextStep()){
+        const advanced = nextStep();
+        if (!advanced) {
           setIsPlaying(false);
         }
       }, speed);

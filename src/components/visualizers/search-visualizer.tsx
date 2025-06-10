@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -35,7 +36,7 @@ const searchAlgorithms: Record<SearchAlgorithmKey, Algorithm & { generator: (arr
 
 export const SearchVisualizer: React.FC = () => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<SearchAlgorithmKey>('linear-search');
-  const [array, setArray] = useState<number[]>(generateRandomArray(10));
+  const [array, setArray] = useState<number[]>(generateRandomArray(10, 100));
   const [target, setTarget] = useState<number | undefined>(undefined);
   const [currentStep, setCurrentStep] = useState<SearchStep | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -64,8 +65,8 @@ export const SearchVisualizer: React.FC = () => {
 
     let arrayToSearch = [...array];
     if (selectedAlgorithm === 'binary-search') {
-      arrayToSearch.sort((a, b) => a - b); // Binary search requires sorted array
-      setArray(arrayToSearch); // Update state to reflect sorted array for display
+      arrayToSearch.sort((a, b) => a - b); 
+      setArray(arrayToSearch); 
        toast({ title: "Array Sorted", description: "Binary Search requires a sorted array. The array has been sorted for you." });
     }
     
@@ -73,7 +74,7 @@ export const SearchVisualizer: React.FC = () => {
     const firstStep = algorithmInstanceRef.current.next().value as SearchStep;
     setCurrentStep(firstStep);
     setIsFinished(firstStep?.isFinalStep || false);
-  }, [array, target, selectedAlgorithm, toast]);
+  }, [array, target, selectedAlgorithm, toast, setCurrentStep, setIsFinished]);
 
   const resetVisualization = useCallback(() => {
     setIsPlaying(false);
@@ -86,7 +87,6 @@ export const SearchVisualizer: React.FC = () => {
     setArray(newArray);
     setIsPlaying(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    // Do not auto-initialize, let user press play/reset or set target
     setCurrentStep({
         array: newArray,
         message: "New array generated. Set a target and start the algorithm.",
@@ -94,13 +94,13 @@ export const SearchVisualizer: React.FC = () => {
         highlights: newArray.map((_, i) => ({ index: i, color: 'neutral' })),
       });
     setIsFinished(false);
-    algorithmInstanceRef.current = null; // Clear old generator
+    algorithmInstanceRef.current = null; 
   }, [dataSize, maxArrayValue]);
   
 
   useEffect(() => {
-    generateNewArray(); // Generate initial array
-  }, []); // Empty dependency to run only once on mount
+    generateNewArray(); 
+  }, []); 
 
 
   const nextStep = useCallback(() => {
@@ -110,26 +110,23 @@ export const SearchVisualizer: React.FC = () => {
         const stepData = next.value as SearchStep;
         setCurrentStep(stepData);
         setIsFinished(stepData.isFinalStep);
-        return true; // Step taken
+        return true; 
       } else {
-        // Handle the final returned value if any, or mark as finished
-        const finalStepData = next.value as SearchStep | undefined; // Generator might return final state
+        const finalStepData = next.value as SearchStep | undefined; 
         if(finalStepData) setCurrentStep(finalStepData);
         setIsPlaying(false);
         setIsFinished(true);
-        return false; // No more steps
+        return false; 
       }
     }
-    return false; // No generator
-  }, []);
+    return false; 
+  }, [setCurrentStep, setIsFinished, setIsPlaying]);
 
   useEffect(() => {
     if (isPlaying && !isFinished) {
       timeoutRef.current = setTimeout(() => {
-        if(nextStep()){
-          // If nextStep returned true, it means there are more steps, so continue playing
-        } else {
-          // If nextStep returned false, it means algorithm finished
+        const advanced = nextStep();
+        if (!advanced) {
           setIsPlaying(false); 
         }
       }, speed);
@@ -143,13 +140,13 @@ export const SearchVisualizer: React.FC = () => {
 
 
   const handlePlayPause = () => {
-    if (isFinished) { // If finished, replay
+    if (isFinished) { 
       resetVisualization();
       setIsPlaying(true);
     } else {
       setIsPlaying(!isPlaying);
     }
-    if (!algorithmInstanceRef.current && target !== undefined) { // If not started yet
+    if (!algorithmInstanceRef.current && target !== undefined) { 
         initializeAlgorithm();
     }
   };
@@ -180,9 +177,9 @@ export const SearchVisualizer: React.FC = () => {
             onValueChange={(value) => {
               setSelectedAlgorithm(value as SearchAlgorithmKey);
               setIsPlaying(false);
-              setCurrentStep(null); // Clear step display
+              setCurrentStep(null); 
               setIsFinished(false);
-              algorithmInstanceRef.current = null; // Reset generator
+              algorithmInstanceRef.current = null; 
             }}
             disabled={isPlaying}
           >
