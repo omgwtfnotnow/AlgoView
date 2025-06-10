@@ -75,6 +75,9 @@ export interface GraphStep extends VisualizerStep {
   currentSourceNodeId?: string; // The source node i in Floyd-Warshall
   currentDestNodeId?: string; // The destination node j in Floyd-Warshall
   negativeCycleDetected?: boolean; // Flag for Floyd-Warshall and Bellman-Ford
+
+  // MST specific
+  mstWeight?: number; // Current total weight of the MST
 }
 // --- End Graph Algorithm Types ---
 
@@ -83,7 +86,7 @@ export type AlgorithmType = 'search' | 'sort' | 'graph';
 
 export type SearchAlgorithmKey = 'linear-search' | 'binary-search';
 export type SortAlgorithmKey = 'bubble-sort' | 'merge-sort' | 'quick-sort';
-export type GraphAlgorithmKey = 'dijkstra' | 'bellman-ford' | 'a-star' | 'floyd-warshall';
+export type GraphAlgorithmKey = 'dijkstra' | 'bellman-ford' | 'a-star' | 'floyd-warshall' | 'kruskal' | 'prim';
 
 export type AlgorithmKey = SearchAlgorithmKey | SortAlgorithmKey | GraphAlgorithmKey;
 
@@ -106,4 +109,3 @@ export type AlgorithmGenerator =
   Generator<SearchStep, SearchStep | undefined, void> |
   Generator<SortStep, SortStep | undefined, void> |
   Generator<GraphStep, GraphStep | undefined, void>;
-

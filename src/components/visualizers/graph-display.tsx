@@ -5,6 +5,7 @@ import type { GraphStep, GraphNode, GraphEdge, GraphHighlightColor, GraphAlgorit
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Network } from 'lucide-react';
 
 interface GraphDisplayProps {
   step: GraphStep | null;
@@ -25,7 +26,7 @@ const highlightColorMapping: Record<GraphHighlightColor, { fill: string; stroke:
   accent: { fill: 'hsl(var(--accent))', stroke: 'hsl(var(--accent))', text: 'hsl(var(--accent-foreground))' },
   destructive: { fill: 'hsl(var(--destructive))', stroke: 'hsl(var(--destructive))', text: 'hsl(var(--destructive-foreground))' },
   visited: { fill: 'hsl(240 60% 70%)', stroke: 'hsl(240 60% 50%)', text: 'hsl(var(--primary-foreground))' },
-  path: { fill: 'hsl(120 70% 45%)', stroke: 'hsl(120 70% 35%)', text: 'hsl(var(--primary-foreground))' },
+  path: { fill: 'hsl(120 70% 45%)', stroke: 'hsl(120 70% 35%)', text: 'hsl(var(--primary-foreground))' }, // Also used for MST edges/nodes
   info: { fill: 'hsl(48 100% 70%)', stroke: 'hsl(48 100% 50%)', text: 'hsl(var(--popover-foreground))' },
   muted: { fill: 'hsl(var(--muted))', stroke: 'hsl(var(--border))', text: 'hsl(var(--muted-foreground))' },
 };
@@ -54,8 +55,8 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
         const angle = (index / numNodes) * 2 * Math.PI - (Math.PI /2); 
         nodesWithPositions.push({
           ...node,
-          xPos: centerX + radius * Math.cos(angle),
-          yPos: centerY + radius * Math.sin(angle),
+          xPos: node.x !== undefined ? (node.x / 100) * (SVG_WIDTH - 2 * PADDING) + PADDING : centerX + radius * Math.cos(angle),
+          yPos: node.y !== undefined ? (node.y / 100) * (SVG_HEIGHT - 2 * PADDING) + PADDING : centerY + radius * Math.sin(angle),
         });
       }
     });
@@ -84,7 +85,14 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
     return step.highlights.find(h => h.type === 'edge' && h.id === edgeId);
   };
 
-  const nodeIds = step.nodes.map(n => n.id).sort(); // For consistent matrix display order
+  const nodeIds = step.nodes.map(n => n.id).sort((a,b) => { // Sort numerically if possible (e.g. n0, n1, n10)
+      const numA = parseInt(a.replace('n',''));
+      const numB = parseInt(b.replace('n',''));
+      if(!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+  }); 
+
+  const isMstAlgorithm = algorithmKey === 'kruskal' || algorithmKey === 'prim';
 
   return (
     <div className="p-4 border rounded-md bg-card min-h-[300px] space-y-4">
@@ -118,7 +126,8 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
             const midY = (y1 + y2) / 2;
 
             let markerEndUrl = '';
-            if (edge.directed) {
+            // For MST algorithms, edges are typically undirected in the MST context, so no arrowheads for 'path' color
+            if (edge.directed && (!isMstAlgorithm || highlight?.color !== 'path')) {
                 if (highlight?.color === 'path') markerEndUrl = 'url(#arrowhead-path)';
                 else if (highlight?.color === 'primary') markerEndUrl = 'url(#arrowhead-primary)';
                 else if (highlight?.color === 'secondary') markerEndUrl = 'url(#arrowhead-secondary)';
@@ -135,7 +144,7 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
                   x2={x2}
                   y2={y2}
                   stroke={colors.stroke}
-                  strokeWidth={highlight?.color === 'path' || highlight?.color === 'primary' || highlight?.color === 'info' ? 3 : 1.5}
+                  strokeWidth={highlight?.color === 'path' || highlight?.color === 'primary' || highlight?.color === 'info' || highlight?.color === 'accent' ? 3 : 1.5}
                   markerEnd={markerEndUrl}
                   className="transition-all duration-300"
                 />
@@ -158,7 +167,20 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
           {positionedNodes.map(node => {
             const highlight = getNodeHighlight(node.id);
             const colors = highlight ? highlightColorMapping[highlight.color] : highlightColorMapping.neutral;
-            const displayLabel = highlight?.label || node.label || node.id;
+            
+            let displayLabel = node.label || node.id;
+            if (highlight?.label) {
+                displayLabel = highlight.label;
+            } else if (algorithmKey === 'dijkstra' || algorithmKey === 'bellman-ford') {
+                displayLabel = `${node.label || node.id}\n${step.distances && step.distances[node.id] !== undefined ? (step.distances[node.id] === Infinity ? '∞' : (step.distances[node.id] as number).toFixed(0)) : 'N/A' }`
+            } else if (algorithmKey === 'a-star' && step.fScores && step.distances) {
+                 const g = step.distances[node.id] === Infinity ? '∞' : (step.distances[node.id] as number).toFixed(0);
+                 const fVal = step.fScores[node.id] === Infinity ? '∞' : step.fScores[node.id]?.toFixed(0);
+                 const hVal = (step.fScores[node.id] !== Infinity && step.distances[node.id] !== Infinity) ? (step.fScores[node.id]! - step.distances[node.id]!).toFixed(0) : (fVal === '∞' && g === '∞' ? '∞' : '?');
+                 displayLabel = `${node.label || node.id}\ng:${g} h:${hVal}\nf:${fVal}`;
+            }
+
+
             const labelLines = displayLabel.split('\\n');
 
             return (
@@ -187,7 +209,7 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
         </svg>
       </ScrollArea>
       
-      {algorithmKey !== 'floyd-warshall' && step.distances && Object.keys(step.distances).length > 0 && (
+      {algorithmKey !== 'floyd-warshall' && !isMstAlgorithm && step.distances && Object.keys(step.distances).length > 0 && (
         <Card>
             <CardHeader className="pb-2">
                 <CardTitle className="text-base">
@@ -199,10 +221,10 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                         {Object.entries(step.distances).map(([nodeId, dist]) => {
                             const node = step.nodes.find(n => n.id === nodeId);
-                            let displayValue = dist === Infinity ? '∞' : dist.toFixed(1);
+                            let displayValue = dist === Infinity ? '∞' : (dist as number).toFixed(1);
                             if (step.fScores) {
                               const fVal = step.fScores[nodeId] === Infinity ? '∞' : step.fScores[nodeId]?.toFixed(1);
-                              const hVal = (step.fScores[nodeId] !== Infinity && dist !== Infinity) ? (step.fScores[nodeId]! - dist!).toFixed(1) : (fVal === '∞' && dist === Infinity ? '∞' : '?');
+                              const hVal = (step.fScores[nodeId] !== Infinity && dist !== Infinity) ? (step.fScores[nodeId]! - (dist as number)!).toFixed(1) : (fVal === '∞' && dist === Infinity ? '∞' : '?');
                               displayValue = `${dist === Infinity ? '∞' : (dist as number).toFixed(1)} | ${hVal} | ${fVal}`;
                             }
                             return (
@@ -279,12 +301,25 @@ export const GraphDisplay: React.FC<GraphDisplayProps> = ({ step, algorithmKey }
       )}
 
 
-       {algorithmKey !== 'floyd-warshall' && step.targetFoundPath && step.targetFoundPath.length > 0 && (
+       {algorithmKey !== 'floyd-warshall' && !isMstAlgorithm && step.targetFoundPath && step.targetFoundPath.length > 0 && (
          <Card className="bg-accent/10 border-accent">
             <CardHeader className="pb-2"><CardTitle className="text-base">Path Found!</CardTitle></CardHeader>
             <CardContent>
                 <p className="text-sm">Path: {step.targetFoundPath.map(nodeId => step.nodes.find(n => n.id === nodeId)?.label || nodeId).join(' → ')}</p>
-                <p className="text-xs">Total Cost (gScore): {step.distances && step.targetFoundPath.length > 0 ? (step.distances[step.targetFoundPath[step.targetFoundPath.length -1]] === Infinity ? '∞' : (step.distances[step.targetFoundPath[step.targetFoundPath.length -1]] as number)?.toFixed(2)) : 'N/A'}</p>
+                <p className="text-xs">Total Cost (gScore for A*): {step.distances && step.targetFoundPath.length > 0 ? (step.distances[step.targetFoundPath[step.targetFoundPath.length -1]] === Infinity ? '∞' : (step.distances[step.targetFoundPath[step.targetFoundPath.length -1]] as number)?.toFixed(2)) : 'N/A'}</p>
+            </CardContent>
+        </Card>
+      )}
+      {isMstAlgorithm && step.mstWeight !== undefined && step.isFinalStep && (
+        <Card className="bg-primary/10 border-primary">
+            <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                    <Network className="h-5 w-5 text-primary"/>
+                    <CardTitle className="text-base">MST Complete</CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm">Minimum Spanning Tree Weight: {step.mstWeight.toFixed(2)}</p>
             </CardContent>
         </Card>
       )}
