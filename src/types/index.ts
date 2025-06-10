@@ -20,12 +20,12 @@ export interface SearchStep extends ArrayVisualizerStep {
   low?: number;           // For binary search
   high?: number;          // For binary search
   mid?: number;           // For binary search
-  targetFoundAtIndex?: number | null;
+  targetFoundAtIndex?: number | undefined; // Changed from null to undefined for consistency
 }
 
 export interface SortStep extends ArrayVisualizerStep {
-  comparing?: [number, number] | null;
-  swapping?: [number, number] | null;
+  comparing?: [number, number] | undefined; // Changed from null to undefined
+  swapping?: [number, number] | undefined; // Changed from null to undefined
   sortedIndices?: number[]; // Indices that are in their final sorted position
   pivotIndex?: number; // For QuickSort
   subArrayBounds?: { start: number, end: number }; // For merge sort partitions etc.
@@ -53,7 +53,7 @@ export interface GraphElementHighlight {
   id: string; // Node or Edge ID
   color: GraphHighlightColor;
   type: 'node' | 'edge';
-  label?: string;
+  label?: string; // e.g., display distance on node
 }
 
 export interface GraphStep extends VisualizerStep {
@@ -63,7 +63,7 @@ export interface GraphStep extends VisualizerStep {
   predecessors?: Record<string, string | null>; // Node ID to predecessor Node ID
   currentNodeId?: string; // Current node being processed
   highlights: GraphElementHighlight[];
-  targetFoundPath?: string[]; // Array of node IDs forming the path
+  targetFoundPath?: string[]; // Array of node IDs forming the path, if target was specified
 }
 // --- End Graph Algorithm Types ---
 
@@ -81,19 +81,18 @@ export interface BaseAlgorithm {
   name: string;
   description: string;
   complexity: {
-    timeAverage?: string; // Dijkstra/A* depend on priority queue implementation
+    timeAverage?: string;
     timeWorst: string;
     spaceWorst: string;
   };
   type: AlgorithmType;
 }
 
-// Specific algorithm types can extend BaseAlgorithm if needed, but for now, one interface works.
 export type VisualizerAlgorithm = BaseAlgorithm;
 
 
 export type AlgorithmGenerator = 
-  Generator<SearchStep, SearchStep | void, void> |
-  Generator<SortStep, SortStep | void, void> |
-  Generator<GraphStep, GraphStep | void, void>;
+  Generator<SearchStep, SearchStep | undefined, void> |
+  Generator<SortStep, SortStep | undefined, void> |
+  Generator<GraphStep, GraphStep | undefined, void>;
 

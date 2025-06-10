@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, RotateCcw, SkipForward, Shuffle, Waypoints } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RotateCcw, SkipForward, Shuffle } from 'lucide-react'; // Removed Waypoints
 import { GraphDisplay } from './graph-display';
 import { generateRandomGraph } from '@/lib/algorithms/graph/utils';
 import { dijkstraGenerator } from '@/lib/algorithms/graph/dijkstra';
 import type { GraphStep, AlgorithmGenerator, GraphAlgorithmKey, VisualizerAlgorithm, GraphNode, GraphEdge } from '@/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Slider } from '@/components/ui/slider';
 
 const graphAlgorithms: Record<GraphAlgorithmKey, VisualizerAlgorithm & { generator: (...args: any[]) => AlgorithmGenerator }> = {
   'dijkstra': {
@@ -30,8 +31,8 @@ const graphAlgorithms: Record<GraphAlgorithmKey, VisualizerAlgorithm & { generat
     description: 'Finds the shortest paths from a single source node, allowing for negative edge weights. Can detect negative cycles.',
     complexity: { timeWorst: 'O(VE)', spaceWorst: 'O(V)' },
     type: 'graph',
-    generator: function*() { // Stub
-      yield { nodes: [], edges: [], message: 'Bellman-Ford not yet implemented.', isFinalStep: true, highlights: [] };
+    generator: function*(nodes: GraphNode[], edges: GraphEdge[]) { 
+      yield { nodes, edges, message: 'Bellman-Ford not yet implemented.', isFinalStep: true, highlights: [] };
     } as any,
   },
   'a-star': {
@@ -40,8 +41,8 @@ const graphAlgorithms: Record<GraphAlgorithmKey, VisualizerAlgorithm & { generat
     description: 'An informed search algorithm that finds the shortest path using a heuristic to guide its search.',
     complexity: { timeWorst: 'O(E) or O(b^d)', spaceWorst: 'O(V+E) or O(b^d)' }, // Highly dependent on heuristic
     type: 'graph',
-    generator: function*() { // Stub
-      yield { nodes: [], edges: [], message: 'A* Search not yet implemented.', isFinalStep: true, highlights: [] };
+    generator: function*(nodes: GraphNode[], edges: GraphEdge[]) { 
+      yield { nodes, edges, message: 'A* Search not yet implemented.', isFinalStep: true, highlights: [] };
     } as any,
   },
 };
@@ -62,57 +63,79 @@ export const GraphVisualizer: React.FC = () => {
 
   const currentAlgorithmDetails = graphAlgorithms[selectedAlgorithmKey];
 
-  const handleGenerateNewGraph = useCallback(() => {
-    const newGraph = generateRandomGraph(numNodes, numEdges, 10, false); // Undirected for now
+  const handleGenerateNewGraph = useCallback((nodesCount = numNodes, edgesCount = numEdges) => {
+    const newGraph = generateRandomGraph(nodesCount, edgesCount, 10, false); // Undirected for now
     setGraph(newGraph);
+    setCurrentStep(null);
+    setIsFinished(false);
+    algorithmInstanceRef.current = null;
+
     if (newGraph.nodes.length > 0) {
       setStartNodeId(newGraph.nodes[0].id);
       if (newGraph.nodes.length > 1) {
-        setTargetNodeId(newGraph.nodes[newGraph.nodes.length - 1].id);
+        // Try to find a target node that is not the start node
+        const potentialTarget = newGraph.nodes.find(n => n.id !== newGraph.nodes[0].id);
+        setTargetNodeId(potentialTarget ? potentialTarget.id : '');
       } else {
         setTargetNodeId('');
       }
+       setCurrentStep({
+        nodes: newGraph.nodes,
+        edges: newGraph.edges,
+        message: "New graph generated. Verify start/target nodes and press Next Step to begin.",
+        isFinalStep: false,
+        highlights: newGraph.nodes.map(n => ({ id: n.id, type: 'node', color: 'neutral', label: '?' }))
+                      .concat(newGraph.edges.map(e=> ({id: e.id, type: 'edge', color: 'neutral'}))),
+      });
     } else {
       setStartNodeId('');
       setTargetNodeId('');
+       setCurrentStep({
+        nodes: [], edges: [], message: "Generated an empty graph. Adjust node count.",
+        isFinalStep: true, highlights: []
+      });
     }
-    setCurrentStep({
-      nodes: newGraph.nodes,
-      edges: newGraph.edges,
-      message: "New graph generated. Select start/target nodes and start the algorithm.",
-      isFinalStep: false,
-      highlights: newGraph.nodes.map(n => ({ id: n.id, type: 'node', color: 'neutral' })),
-    });
-    setIsFinished(false);
-    algorithmInstanceRef.current = null;
-  }, [numNodes, numEdges]);
+    
+  }, [numNodes, numEdges]); // Add numNodes, numEdges as dependencies
   
   useEffect(() => {
-    handleGenerateNewGraph();
-  }, []);
+    handleGenerateNewGraph(5,7); // Initial graph generation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount to generate initial graph
 
 
   const initializeAlgorithm = useCallback(() => {
     if (!graph.nodes.length) {
         toast({ title: "Empty Graph", description: "Please generate a graph first.", variant: "destructive" });
-        return;
+        return false;
     }
-    if (!startNodeId) {
+    if (!startNodeId || startNodeId.trim() === '') {
         toast({ title: "Missing Start Node", description: "Please specify a start node ID.", variant: "destructive" });
-        return;
+         setCurrentStep({
+            nodes: graph.nodes, edges: graph.edges, highlights: currentStep?.highlights || [],
+            message: "Error: Start node ID is required.", isFinalStep: true
+        });
+        return false;
     }
-    if (currentAlgorithmDetails.key === 'a-star' && !targetNodeId) {
-         toast({ title: "Missing Target Node", description: "A* Search requires a target node ID.", variant: "destructive" });
-        return;
+    if (!graph.nodes.find(n => n.id === startNodeId)) {
+        toast({ title: "Invalid Start Node", description: `Start node "${startNodeId}" does not exist in the graph.`, variant: "destructive" });
+        setCurrentStep({
+            nodes: graph.nodes, edges: graph.edges, highlights: currentStep?.highlights || [],
+            message: `Error: Start node "${startNodeId}" does not exist.`, isFinalStep: true
+        });
+        return false;
+    }
+    if (targetNodeId && targetNodeId.trim() !== '' && !graph.nodes.find(n => n.id === targetNodeId)) {
+         toast({ title: "Invalid Target Node", description: `Target node "${targetNodeId}" does not exist. Leave empty if not searching for a specific target.`, variant: "destructive" });
+         setCurrentStep({
+            nodes: graph.nodes, edges: graph.edges, highlights: currentStep?.highlights || [],
+            message: `Error: Target node "${targetNodeId}" does not exist.`, isFinalStep: true
+        });
+        return false;
     }
 
-
-    const generator = graphAlgorithms[selectedAlgorithmKey].generator;
-    if (selectedAlgorithmKey === 'dijkstra') {
-         algorithmInstanceRef.current = generator(graph.nodes, graph.edges, startNodeId, targetNodeId || undefined);
-    } else { // Fallback for other algorithms or add specific logic
-         algorithmInstanceRef.current = generator(graph.nodes, graph.edges, startNodeId, targetNodeId || undefined); // Assuming similar signature for stubs
-    }
+    const generatorFn = graphAlgorithms[selectedAlgorithmKey].generator;
+    algorithmInstanceRef.current = generatorFn(graph.nodes, graph.edges, startNodeId, targetNodeId && targetNodeId.trim() !== '' ? targetNodeId : undefined);
     
     const firstStepResult = algorithmInstanceRef.current?.next();
     if (firstStepResult && !firstStepResult.done) {
@@ -120,35 +143,44 @@ export const GraphVisualizer: React.FC = () => {
         setCurrentStep(step);
         setIsFinished(step?.isFinalStep || false);
         if (step?.isFinalStep && step.message.toLowerCase().includes("error")) {
-            toast({ title: "Algorithm Error", description: step.message, variant: "destructive" });
+            toast({ title: "Algorithm Initialization Error", description: step.message, variant: "destructive" });
         }
-    } else if (firstStepResult?.done && firstStepResult.value) {
+    } else if (firstStepResult?.done && firstStepResult.value) { // Generator finished on first step (e.g. error)
         const step = firstStepResult.value as GraphStep;
         setCurrentStep(step);
         setIsFinished(true);
          if (step.message.toLowerCase().includes("error")) {
-            toast({ title: "Algorithm Error", description: step.message, variant: "destructive" });
+            toast({ title: "Algorithm Initialization Error", description: step.message, variant: "destructive" });
         }
+    } else if (!firstStepResult) { // Should not happen if generator is valid
+        toast({ title: "Algorithm Error", description: "Failed to start algorithm generator.", variant: "destructive" });
+        setIsFinished(true);
+        return false;
     }
-
-
-  }, [graph, startNodeId, targetNodeId, selectedAlgorithmKey, toast, currentAlgorithmDetails]);
+    return true;
+  }, [graph, startNodeId, targetNodeId, selectedAlgorithmKey, toast, currentStep?.highlights]);
 
 
   const resetVisualization = useCallback(() => {
-    initializeAlgorithm();
-  }, [initializeAlgorithm]);
+    // Re-initialize with current graph settings, or regenerate graph if preferred
+    if(graph.nodes.length > 0){
+        initializeAlgorithm();
+    } else {
+        handleGenerateNewGraph(); // Regenerate if graph is empty
+    }
+  }, [initializeAlgorithm, handleGenerateNewGraph, graph.nodes.length]);
 
   const nextStep = useCallback(() => {
     if (!algorithmInstanceRef.current) {
-      initializeAlgorithm();
-      // Check if init itself was final (e.g., error)
-      if(algorithmInstanceRef.current){
-        const firstStepVal = (algorithmInstanceRef.current as any)._nextValue // HACK to peek, not standard
-        if (firstStepVal && firstStepVal.isFinalStep) return false;
-      } else {
-        return false;
-      }
+      const initialized = initializeAlgorithm();
+      if (!initialized) return false; // Stop if initialization failed
+
+      // Check if init itself was final (e.g., error or immediate result)
+      // The first actual step is already yielded by initializeAlgorithm, so this call might be redundant
+      // or should only happen if currentStep is null.
+      // For now, let's assume initializeAlgorithm sets the first step.
+      // If currentStep is already final after init, no need to call next() again.
+      if (currentStep?.isFinalStep) return false;
     }
 
     if (algorithmInstanceRef.current) {
@@ -161,18 +193,20 @@ export const GraphVisualizer: React.FC = () => {
             toast({ title: "Algorithm Error", description: stepData.message, variant: "destructive" });
         }
         return true;
-      } else {
-        const finalStepData = next.value as GraphStep | undefined;
-        if (finalStepData) setCurrentStep(finalStepData);
-        setIsFinished(true);
-         if (finalStepData && finalStepData.message.toLowerCase().includes("error")) {
-            toast({ title: "Algorithm Error", description: finalStepData.message, variant: "destructive" });
+      } else { // Generator is done
+        const finalStepData = next.value as GraphStep | undefined; // Gen can return final step
+        if (finalStepData) {
+             setCurrentStep(finalStepData);
+             if (finalStepData.message.toLowerCase().includes("error")) {
+                toast({ title: "Algorithm Error", description: finalStepData.message, variant: "destructive" });
+            }
         }
+        setIsFinished(true);
         return false;
       }
     }
     return false;
-  }, [initializeAlgorithm, toast]);
+  }, [initializeAlgorithm, toast, currentStep?.isFinalStep]);
 
 
   return (
@@ -194,8 +228,8 @@ export const GraphVisualizer: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               {Object.values(graphAlgorithms).map((algo) => (
-                <SelectItem key={algo.key} value={algo.key}>
-                  {algo.name}
+                <SelectItem key={algo.key} value={algo.key} disabled={algo.key !== 'dijkstra'}>
+                  {algo.name} {algo.key !== 'dijkstra' ? '(Not Implemented)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -213,16 +247,16 @@ export const GraphVisualizer: React.FC = () => {
         </Card>
       </div>
 
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4 shadow">
         <CardTitle className="text-xl">Graph Configuration</CardTitle>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <Label htmlFor="numNodes">Number of Nodes ({numNodes})</Label>
-                <Input id="numNodes" type="range" min="2" max="15" value={numNodes} onChange={(e) => setNumNodes(parseInt(e.target.value))} className="mt-1"/>
+                <Label htmlFor="numNodesSlider">Number of Nodes ({numNodes})</Label>
+                <Slider id="numNodesSlider" min={2} max={15} value={[numNodes]} onValueChange={(val) => setNumNodes(val[0])} className="mt-1"/>
             </div>
             <div>
-                <Label htmlFor="numEdges">Number of Edges ({numEdges})</Label>
-                <Input id="numEdges" type="range" min="1" max="30" value={numEdges} onChange={(e) => setNumEdges(parseInt(e.target.value))} className="mt-1"/>
+                <Label htmlFor="numEdgesSlider">Number of Edges ({numEdges})</Label>
+                <Slider id="numEdgesSlider" min={1} max={Math.min(30, numNodes * (numNodes -1) / 2 )} value={[numEdges]} onValueChange={(val) => setNumEdges(val[0])} className="mt-1"/>
             </div>
         </div>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -231,20 +265,20 @@ export const GraphVisualizer: React.FC = () => {
                 <Input id="startNode" type="text" value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} placeholder="e.g., n0" className="mt-1"/>
             </div>
             <div>
-                <Label htmlFor="targetNode">Target Node ID (Optional)</Label>
+                <Label htmlFor="targetNode">Target Node ID (Optional for Dijkstra)</Label>
                 <Input id="targetNode" type="text" value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} placeholder="e.g., n4" className="mt-1"/>
             </div>
         </div>
-        <Button onClick={handleGenerateNewGraph} variant="outline">
+        <Button onClick={() => handleGenerateNewGraph()} variant="outline">
           <Shuffle className="mr-2 h-4 w-4" /> Generate New Random Graph
         </Button>
       </Card>
       
        <div className="flex flex-wrap gap-2 justify-center p-4 border rounded-lg bg-card shadow-sm">
-        <Button onClick={nextStep} disabled={isFinished} variant="outline">
+        <Button onClick={nextStep} disabled={isFinished || selectedAlgorithmKey !== 'dijkstra'} variant="outline">
           <SkipForward className="mr-2 h-4 w-4" /> Next Step
         </Button>
-        <Button onClick={resetVisualization} variant="destructive">
+        <Button onClick={resetVisualization} variant="destructive" disabled={selectedAlgorithmKey !== 'dijkstra'}>
           <RotateCcw className="mr-2 h-4 w-4" /> Reset Algorithm
         </Button>
       </div>
@@ -253,24 +287,21 @@ export const GraphVisualizer: React.FC = () => {
 
       {currentStep && (
         <Card className={cn(
-            "transition-all",
-            currentStep.isFinalStep && currentStep.targetFoundPath ? "border-accent bg-accent/10" :
-            currentStep.isFinalStep && !currentStep.targetFoundPath && currentStep.message.toLowerCase().includes("not reachable") ? "border-destructive bg-destructive/10" :
+            "transition-all shadow-md",
+            currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 ? "border-accent bg-accent/10" :
+            currentStep.isFinalStep && currentStep.message.toLowerCase().includes("not reachable") ? "border-destructive bg-destructive/10" :
             currentStep.isFinalStep && currentStep.message.toLowerCase().includes("error") ? "border-destructive bg-destructive/10" :
             currentStep.isFinalStep ? "border-primary bg-primary/10" :
             "bg-card"
         )}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-4">
                 <CardTitle className="text-sm font-medium">Status</CardTitle>
-                {currentStep.isFinalStep && currentStep.targetFoundPath && <CheckCircle2 className="h-5 w-5 text-accent" />}
+                {currentStep.isFinalStep && currentStep.targetFoundPath && currentStep.targetFoundPath.length > 0 && <CheckCircle2 className="h-5 w-5 text-accent" />}
                 {currentStep.isFinalStep && (currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <AlertCircle className="h-5 w-5 text-destructive" />}
-                 {currentStep.isFinalStep && !currentStep.targetFoundPath && !(currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                {currentStep.isFinalStep && (!currentStep.targetFoundPath || currentStep.targetFoundPath.length === 0) && !(currentStep.message.toLowerCase().includes("not reachable") || currentStep.message.toLowerCase().includes("error")) && <CheckCircle2 className="h-5 w-5 text-primary" />}
             </CardHeader>
             <CardContent className="px-4 pb-3">
-                <p className="text-sm text-muted-foreground min-h-[20px]">{currentStep.message || "Algorithm initialized."}</p>
-                {currentStep.targetFoundPath && (
-                    <p className="text-xs mt-1">Path: {currentStep.targetFoundPath.join(' -> ')}</p>
-                )}
+                <p className="text-sm text-muted-foreground min-h-[20px] whitespace-pre-wrap">{currentStep.message || "Algorithm initialized. Press Next Step."}</p>
             </CardContent>
         </Card>
       )}
