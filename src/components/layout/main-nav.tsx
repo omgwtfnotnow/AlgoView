@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Lightbulb, ListFilter, NetworkIcon, Search } from 'lucide-react';
+import { Lightbulb, ListFilter, NetworkIcon, Search, Waypoints } from 'lucide-react';
 import {
   Sidebar,
   SidebarHeader,
@@ -17,6 +18,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/search', label: 'Search Visualizer', icon: Search },
   { href: '/sort', label: 'Sort Visualizer', icon: ListFilter },
+  { href: '/graph', label: 'Graph Visualizer', icon: Waypoints },
   { href: '/recommendations', label: 'Smart Suggestions', icon: Lightbulb },
 ];
 
